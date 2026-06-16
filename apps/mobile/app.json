@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "Household Inventory",
+    "slug": "household-inventory",
+    "scheme": "household-inventory",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a1a2e"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Used to photograph rooms and storage contents.",
+        "NSPhotoLibraryUsageDescription": "Used to select room and storage photos.",
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1a1a2e"
+      },
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE"]
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Household Inventory to access your photos.",
+          "cameraPermission": "Allow Household Inventory to access your camera."
+        }
+      ],
+      "expo-apple-authentication"
+    ]
+  }
+}
