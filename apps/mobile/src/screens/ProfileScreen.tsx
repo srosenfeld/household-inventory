@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
@@ -17,6 +16,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/api';
 import { pickImageFromLibrary } from '../services/camera';
 import { resolveApiUrl } from '../config';
+import { Button, Input } from '../components/ui';
+import { colors, spacing, typography } from '../theme';
 
 export function ProfileScreen(_props: ProfileScreenProps) {
   const { signOut, updateEmail, updatePassword } = useAuth();
@@ -103,10 +104,7 @@ export function ProfileScreen(_props: ProfileScreenProps) {
     setSaving(true);
     try {
       await updateEmail(email.trim());
-      Alert.alert(
-        'Confirm your email',
-        'We sent a confirmation link to your new email address.'
-      );
+      Alert.alert('Confirm your email', 'We sent a confirmation link to your new email address.');
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to update email');
     } finally {
@@ -149,7 +147,7 @@ export function ProfileScreen(_props: ProfileScreenProps) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#4a6cf7" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -162,7 +160,7 @@ export function ProfileScreen(_props: ProfileScreenProps) {
             <Image source={{ uri: profileImageUri }} style={styles.avatar} />
             {saving ? (
               <View style={styles.avatarOverlay}>
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.ink} />
               </View>
             ) : null}
           </View>
@@ -177,63 +175,53 @@ export function ProfileScreen(_props: ProfileScreenProps) {
       </TouchableOpacity>
 
       <Text style={styles.sectionTitle}>Profile</Text>
-      <Text style={styles.label}>First name</Text>
-      <TextInput style={styles.input} value={firstName} onChangeText={setFirstName} />
-      <Text style={styles.label}>Last name</Text>
-      <TextInput style={styles.input} value={lastName} onChangeText={setLastName} />
-
-      <TouchableOpacity style={styles.primaryButton} onPress={handleSaveProfile} disabled={saving}>
-        {saving ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.primaryButtonText}>Save profile</Text>
-        )}
-      </TouchableOpacity>
+      <Text style={styles.fieldLabel}>First name</Text>
+      <Input value={firstName} onChangeText={setFirstName} />
+      <Text style={styles.fieldLabel}>Last name</Text>
+      <Input value={lastName} onChangeText={setLastName} />
+      <Button title="Save profile" onPress={handleSaveProfile} loading={saving} />
 
       <Text style={styles.sectionTitle}>Email</Text>
-      <TextInput
-        style={styles.input}
+      <Input
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
         keyboardType="email-address"
       />
-      <TouchableOpacity style={styles.secondaryButton} onPress={handleUpdateEmail} disabled={saving}>
-        <Text style={styles.secondaryButtonText}>Update email</Text>
-      </TouchableOpacity>
+      <Button title="Update email" variant="secondary" onPress={handleUpdateEmail} disabled={saving} />
 
       <Text style={styles.sectionTitle}>Password</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="New password"
-        secureTextEntry
-        value={newPassword}
-        onChangeText={setNewPassword}
-      />
-      <TextInput
-        style={styles.input}
+      <Input placeholder="New password" secureTextEntry value={newPassword} onChangeText={setNewPassword} />
+      <Input
         placeholder="Confirm new password"
         secureTextEntry
         value={confirmPassword}
         onChangeText={setConfirmPassword}
       />
-      <TouchableOpacity style={styles.secondaryButton} onPress={handleUpdatePassword} disabled={saving}>
-        <Text style={styles.secondaryButtonText}>Update password</Text>
-      </TouchableOpacity>
+      <Button title="Update password" variant="secondary" onPress={handleUpdatePassword} disabled={saving} />
 
-      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-        <Text style={styles.signOutText}>Sign out</Text>
-      </TouchableOpacity>
+      <Button title="Sign out" variant="destructive" onPress={handleSignOut} style={styles.signOut} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fc' },
-  content: { padding: 20, paddingBottom: 40 },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  avatarWrap: { alignItems: 'center', marginBottom: 24 },
-  avatar: { width: 96, height: 96, borderRadius: 48 },
+  container: { flex: 1, backgroundColor: colors.canvasSoft },
+  content: { padding: spacing.screenPadding, paddingBottom: 40 },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.canvasSoft,
+  },
+  avatarWrap: { alignItems: 'center', marginBottom: spacing.xxl },
+  avatar: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 3,
+    borderColor: colors.primary,
+  },
   avatarOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -242,47 +230,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarPlaceholder: {
-    backgroundColor: '#4a6cf7',
+    backgroundColor: colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: colors.primary,
   },
-  avatarInitial: { color: '#fff', fontSize: 36, fontWeight: '700' },
-  changePhoto: { color: '#4a6cf7', marginTop: 8, fontWeight: '500' },
+  avatarInitial: { color: colors.primaryDeep, fontSize: 36, fontWeight: '700' },
+  changePhoto: { color: colors.primaryDeep, marginTop: spacing.sm, fontWeight: '500' },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1a1a2e',
-    marginTop: 16,
-    marginBottom: 8,
+    ...typography.sectionTitle,
+    color: colors.ink,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
   },
-  label: { fontSize: 14, color: '#666', marginBottom: 6 },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 14,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#e8e8ef',
-    marginBottom: 12,
-  },
-  primaryButton: {
-    backgroundColor: '#4a6cf7',
-    padding: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  primaryButtonText: { color: '#fff', fontWeight: '600' },
-  secondaryButton: {
-    backgroundColor: '#fff',
-    padding: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#4a6cf7',
-    marginBottom: 8,
-  },
-  secondaryButtonText: { color: '#4a6cf7', fontWeight: '600' },
-  signOutButton: { padding: 16, alignItems: 'center', marginTop: 24 },
-  signOutText: { color: '#e74c3c', fontWeight: '600', fontSize: 16 },
+  fieldLabel: { ...typography.label, color: colors.inkSecondary, marginBottom: 6 },
+  signOut: { marginTop: spacing.xxl },
 });

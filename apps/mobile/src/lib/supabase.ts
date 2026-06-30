@@ -1,9 +1,10 @@
 import 'react-native-url-polyfill/auto';
+import { Platform } from 'react-native';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
+import { makeRedirectUri } from 'expo-auth-session';
 
-// AsyncStorage avoids SecureStore's 2048-byte limit (Supabase sessions exceed it)
 const AsyncStorageAdapter = {
   getItem: (key: string) => AsyncStorage.getItem(key),
   setItem: (key: string, value: string) => AsyncStorage.setItem(key, value),
@@ -39,7 +40,7 @@ export function getSupabase(): SupabaseClient {
       storage: AsyncStorageAdapter,
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: false,
+      detectSessionInUrl: Platform.OS === 'web',
     },
   });
 
@@ -59,4 +60,17 @@ export async function createSessionFromUrl(url: string) {
   });
   if (error) throw error;
   return data.session;
+}
+
+/** OAuth / password-reset redirect target for the current platform */
+export function getAuthRedirectUrl(path = 'auth/callback'): string {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    if (path === 'auth/callback') return window.location.origin;
+    return `${window.location.origin}/${path.replace(/^\//, '')}`;
+  }
+
+  return makeRedirectUri({
+    scheme: 'household-inventory',
+    path,
+  });
 }

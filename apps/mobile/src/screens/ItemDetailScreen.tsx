@@ -1,18 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  ScrollView,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import type { ItemDetailScreenProps } from '../navigation/types';
 import { ITEM_CATEGORIES } from '@household-inventory/shared';
 import type { Item } from '@household-inventory/shared';
 import { api } from '../services/api';
+import { pickImageFromLibrary } from '../services/camera';
+import { resolveApiUrl } from '../config';
+import { PhotoThumbnail } from '../components/PhotoThumbnail';
+import { Button, Chip, Input } from '../components/ui';
+import { colors, spacing, typography } from '../theme';
 
 export function ItemDetailScreen({ navigation, route }: ItemDetailScreenProps) {
   const { itemId, item: initialItem, storageAreaName, roomName } = route.params;
@@ -21,8 +17,12 @@ export function ItemDetailScreen({ navigation, route }: ItemDetailScreenProps) {
   const [description, setDescription] = useState(initialItem?.description ?? '');
   const [quantity, setQuantity] = useState(String(initialItem?.quantity ?? 1));
   const [category, setCategory] = useState(initialItem?.category ?? 'other');
+  const [photoUri, setPhotoUri] = useState<string | null>(
+    initialItem?.photoUrl ? resolveApiUrl(initialItem.photoUrl) : null
+  );
   const [loading, setLoading] = useState(!initialItem);
   const [saving, setSaving] = useState(false);
+  const [photoSaving, setPhotoSaving] = useState(false);
 
   useEffect(() => {
     if (!initialItem) {
@@ -32,10 +32,34 @@ export function ItemDetailScreen({ navigation, route }: ItemDetailScreenProps) {
         setDescription(data.description ?? '');
         setQuantity(String(data.quantity));
         setCategory(data.category);
+        setPhotoUri(data.photoUrl ? resolveApiUrl(data.photoUrl) : null);
         setLoading(false);
       });
     }
   }, [itemId, initialItem]);
+
+  const handleChangePhoto = async () => {
+    let uri: string | null;
+    try {
+      uri = await pickImageFromLibrary();
+    } catch (err) {
+      Alert.alert('Permission needed', err instanceof Error ? err.message : 'Cannot access photos');
+      return;
+    }
+    if (!uri) return;
+
+    setPhotoUri(uri);
+    setPhotoSaving(true);
+    try {
+      const updated = await api.updateItem(itemId, { photoUri: uri });
+      setItem(updated);
+      setPhotoUri(updated.photoUrl ? resolveApiUrl(updated.photoUrl) : uri);
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to save photo');
+    } finally {
+      setPhotoSaving(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -76,7 +100,7 @@ export function ItemDetailScreen({ navigation, route }: ItemDetailScreenProps) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#4a6cf7" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -87,47 +111,40 @@ export function ItemDetailScreen({ navigation, route }: ItemDetailScreenProps) {
         <Text style={styles.location}>{roomName} → {storageAreaName}</Text>
       ) : null}
 
+      <View style={styles.photoRow}>
+        <PhotoThumbnail
+          uri={photoUri}
+          onPress={handleChangePhoto}
+          label="Item photo"
+          size={96}
+          loading={photoSaving}
+        />
+        <Text style={styles.photoHint}>Add a photo to identify this item at a glance.</Text>
+      </View>
+
       <Text style={styles.label}>Name</Text>
-      <TextInput style={styles.input} value={name} onChangeText={setName} />
+      <Input value={name} onChangeText={setName} style={styles.field} />
 
       <Text style={styles.label}>Description</Text>
-      <TextInput
-        style={[styles.input, styles.multiline]}
-        value={description}
-        onChangeText={setDescription}
-        multiline
-      />
+      <Input value={description} onChangeText={setDescription} multiline style={styles.field} />
 
       <Text style={styles.label}>Quantity</Text>
-      <TextInput
-        style={styles.input}
-        value={quantity}
-        onChangeText={setQuantity}
-        keyboardType="number-pad"
-      />
+      <Input value={quantity} onChangeText={setQuantity} keyboardType="number-pad" style={styles.field} />
 
       <Text style={styles.label}>Category</Text>
       <View style={styles.categoryGrid}>
         {ITEM_CATEGORIES.map((cat) => (
-          <TouchableOpacity
+          <Chip
             key={cat}
-            style={[styles.categoryChip, category === cat && styles.categoryChipActive]}
+            label={cat}
+            selected={category === cat}
             onPress={() => setCategory(cat)}
-          >
-            <Text style={[styles.categoryChipText, category === cat && styles.categoryChipTextActive]}>
-              {cat}
-            </Text>
-          </TouchableOpacity>
+          />
         ))}
       </View>
 
-      <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
-        {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>Save changes</Text>}
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-        <Text style={styles.deleteButtonText}>Delete item</Text>
-      </TouchableOpacity>
+      <Button title="Save changes" onPress={handleSave} loading={saving} style={styles.saveButton} />
+      <Button title="Delete item" variant="destructive" onPress={handleDelete} />
     </ScrollView>
   );
 }
@@ -135,83 +152,53 @@ export function ItemDetailScreen({ navigation, route }: ItemDetailScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fc',
+    backgroundColor: colors.canvasSoft,
   },
   content: {
-    padding: 20,
+    padding: spacing.screenPadding,
     paddingBottom: 40,
   },
   centered: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.canvasSoft,
   },
   location: {
     fontSize: 14,
-    color: '#4a6cf7',
+    color: colors.primaryDeep,
     fontWeight: '500',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
+  },
+  photoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  photoHint: {
+    flex: 1,
+    ...typography.caption,
+    color: colors.inkSecondary,
+    lineHeight: 20,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1a1a2e',
+    ...typography.label,
+    color: colors.ink,
     marginBottom: 6,
-    marginTop: 12,
+    marginTop: spacing.md,
   },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 14,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#e8e8ef',
-  },
-  multiline: {
-    minHeight: 80,
-    textAlignVertical: 'top',
+  field: {
+    marginBottom: 0,
   },
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-  },
-  categoryChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: '#eef2ff',
-  },
-  categoryChipActive: {
-    backgroundColor: '#4a6cf7',
-  },
-  categoryChipText: {
-    fontSize: 13,
-    color: '#4a6cf7',
-    textTransform: 'capitalize',
-  },
-  categoryChipTextActive: {
-    color: '#fff',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
   },
   saveButton: {
-    backgroundColor: '#4a6cf7',
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  deleteButton: {
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  deleteButtonText: {
-    color: '#e74c3c',
-    fontWeight: '600',
+    marginTop: spacing.xxl,
+    marginBottom: spacing.sm,
   },
 });

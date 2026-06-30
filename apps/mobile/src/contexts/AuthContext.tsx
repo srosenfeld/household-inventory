@@ -3,15 +3,11 @@ import { Platform } from 'react-native';
 import type { Session, User } from '@supabase/supabase-js';
 import * as WebBrowser from 'expo-web-browser';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { makeRedirectUri } from 'expo-auth-session';
-import { createSessionFromUrl, getSupabase, isSupabaseConfigured } from '../lib/supabase';
+import { createSessionFromUrl, getSupabase, getAuthRedirectUrl, isSupabaseConfigured } from '../lib/supabase';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const redirectTo = makeRedirectUri({
-  scheme: 'household-inventory',
-  path: 'auth/callback',
-});
+const redirectTo = getAuthRedirectUrl('auth/callback');
 
 interface AuthContextValue {
   session: Session | null;
@@ -85,6 +81,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
+    if (Platform.OS === 'web') {
+      const { error } = await getSupabase().auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: getAuthRedirectUrl('auth/callback') },
+      });
+      if (error) throw error;
+      return;
+    }
+
     const { data, error } = await getSupabase().auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo, skipBrowserRedirect: true },
@@ -122,12 +127,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
-    const resetRedirect = makeRedirectUri({
-      scheme: 'household-inventory',
-      path: 'auth/reset',
-    });
     const { error } = await getSupabase().auth.resetPasswordForEmail(email, {
-      redirectTo: resetRedirect,
+      redirectTo: getAuthRedirectUrl('auth/reset'),
     });
     if (error) throw error;
   }, []);

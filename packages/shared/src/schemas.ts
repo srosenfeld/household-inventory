@@ -207,3 +207,131 @@ export const updateProfileSchema = z.object({
 });
 
 export type User = z.infer<typeof userSchema>;
+
+export const oiInsightSourceSchema = z.enum(['konmari', 'home_edit', 'container_store', 'data']);
+export const oiInsightSeveritySchema = z.enum(['info', 'suggestion', 'action']);
+
+export const oiCategoryTotalSchema = z.object({
+  category: z.enum(ITEM_CATEGORIES),
+  itemCount: z.number().int(),
+  totalQuantity: z.number().int(),
+});
+
+export const oiCategoryRoomBreakdownSchema = z.object({
+  category: z.enum(ITEM_CATEGORIES),
+  roomId: z.string().uuid(),
+  roomName: z.string(),
+  itemCount: z.number().int(),
+  totalQuantity: z.number().int(),
+});
+
+export const oiRoomSummarySchema = z.object({
+  roomId: z.string().uuid(),
+  roomName: z.string(),
+  itemCount: z.number().int(),
+  totalQuantity: z.number().int(),
+  storageAreaCount: z.number().int(),
+  topCategories: z.array(z.enum(ITEM_CATEGORIES)),
+});
+
+export const oiDuplicateItemSchema = z.object({
+  itemId: z.string().uuid(),
+  itemName: z.string(),
+  roomId: z.string().uuid(),
+  roomName: z.string(),
+  storageAreaId: z.string().uuid(),
+  storageAreaName: z.string(),
+  quantity: z.number().int(),
+});
+
+export const oiDuplicateGroupSchema = z.object({
+  normalizedName: z.string(),
+  items: z.array(oiDuplicateItemSchema),
+});
+
+export const oiEmptyStorageAreaSchema = z.object({
+  storageAreaId: z.string().uuid(),
+  storageAreaName: z.string(),
+  storageAreaType: z.enum(STORAGE_AREA_TYPES),
+  roomId: z.string().uuid(),
+  roomName: z.string(),
+});
+
+export const oiResourceTypeSchema = z.enum(['watch', 'read', 'learn', 'shop']);
+export const oiResourceVendorSchema = z.enum([
+  'netflix',
+  'marie_kondo',
+  'home_edit',
+  'container_store',
+  'amazon',
+]);
+
+export const oiResourceLinkSchema = z.object({
+  id: z.string(),
+  type: oiResourceTypeSchema,
+  vendor: oiResourceVendorSchema,
+  title: z.string(),
+  subtitle: z.string().optional(),
+  url: z.string().url(),
+  imageUrl: z.string().url().optional(),
+});
+
+export const oiProductPickSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  imageUrl: z.string().url(),
+  shopUrl: z.string().url(),
+  vendor: z.enum(['container_store', 'amazon']),
+  fitNote: z.string().optional(),
+});
+
+export const oiInsightSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  body: z.string(),
+  severity: oiInsightSeveritySchema,
+  source: oiInsightSourceSchema,
+  relatedCategories: z.array(z.enum(ITEM_CATEGORIES)).optional(),
+  relatedRoomIds: z.array(z.string().uuid()).optional(),
+  relatedStorageAreaId: z.string().uuid().optional(),
+  contextLabel: z.string().optional(),
+  resources: z.array(oiResourceLinkSchema).optional(),
+  productPicks: z.array(oiProductPickSchema).optional(),
+});
+
+export const oiStatsSchema = z.object({
+  totalItems: z.number().int(),
+  totalQuantity: z.number().int(),
+  roomCount: z.number().int(),
+  storageAreaCount: z.number().int(),
+  emptyStorageAreaCount: z.number().int(),
+  categoryCount: z.number().int(),
+});
+
+export const organizationalIntelligenceSchema = z.object({
+  householdId: z.string().uuid(),
+  generatedAt: z.string().datetime(),
+  stats: oiStatsSchema,
+  categoryTotals: z.array(oiCategoryTotalSchema),
+  categoryByRoom: z.array(oiCategoryRoomBreakdownSchema),
+  roomSummaries: z.array(oiRoomSummarySchema),
+  duplicateGroups: z.array(oiDuplicateGroupSchema),
+  emptyStorageAreas: z.array(oiEmptyStorageAreaSchema),
+  insights: z.array(oiInsightSchema),
+});
+
+export type OIInsightSource = z.infer<typeof oiInsightSourceSchema>;
+export type OIInsightSeverity = z.infer<typeof oiInsightSeveritySchema>;
+export type OICategoryTotal = z.infer<typeof oiCategoryTotalSchema>;
+export type OICategoryRoomBreakdown = z.infer<typeof oiCategoryRoomBreakdownSchema>;
+export type OIRoomSummary = z.infer<typeof oiRoomSummarySchema>;
+export type OIDuplicateGroup = z.infer<typeof oiDuplicateGroupSchema>;
+export type OIEmptyStorageArea = z.infer<typeof oiEmptyStorageAreaSchema>;
+export type OIInsight = z.infer<typeof oiInsightSchema>;
+export type OIResourceLink = z.infer<typeof oiResourceLinkSchema>;
+export type OIProductPick = z.infer<typeof oiProductPickSchema>;
+export type OIResourceType = z.infer<typeof oiResourceTypeSchema>;
+export type OIResourceVendor = z.infer<typeof oiResourceVendorSchema>;
+export type OIStats = z.infer<typeof oiStatsSchema>;
+export type OrganizationalIntelligence = z.infer<typeof organizationalIntelligenceSchema>;

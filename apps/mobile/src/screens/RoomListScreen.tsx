@@ -1,22 +1,16 @@
 import React, { useCallback, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  FlatList,
-  TextInput,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { Text, StyleSheet, FlatList, Alert, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { RoomListScreenProps } from '../navigation/types';
+import { useHousehold } from '../contexts/HouseholdContext';
 import { api } from '../services/api';
 import { pickImageFromLibrary } from '../services/camera';
+import { Button, Card, Input, ScreenContainer } from '../components/ui';
+import { colors, spacing, typography } from '../theme';
 import type { Room } from '@household-inventory/shared';
 
-export function RoomListScreen({ navigation, route }: RoomListScreenProps) {
-  const { householdId, householdName } = route.params;
+export function RoomListScreen({ navigation }: RoomListScreenProps) {
+  const { householdId } = useHousehold();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [newRoomName, setNewRoomName] = useState('');
@@ -57,7 +51,6 @@ export function RoomListScreen({ navigation, route }: RoomListScreenProps) {
       navigation.navigate('RoomLayout', {
         roomId: room.id,
         roomName: room.name,
-        householdId,
       });
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to create room');
@@ -67,106 +60,64 @@ export function RoomListScreen({ navigation, route }: RoomListScreenProps) {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.createSection}>
-        <TextInput
-          style={styles.input}
-          placeholder="New room name (e.g. Garage)"
-          value={newRoomName}
-          onChangeText={setNewRoomName}
-        />
-        <TouchableOpacity style={styles.createButton} onPress={handleCreateRoom} disabled={creating}>
-          {creating ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.createButtonText}>Add room</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+    <ScreenContainer>
+      <Text style={styles.sectionTitle}>Add a room</Text>
+      <Input placeholder="New room name (e.g. Garage)" value={newRoomName} onChangeText={setNewRoomName} />
+      <Button title="Add room" onPress={handleCreateRoom} loading={creating} style={styles.addButton} />
 
       {loading ? (
-        <ActivityIndicator style={styles.loader} color="#4a6cf7" />
+        <ActivityIndicator style={styles.loader} color={colors.primary} />
       ) : (
         <FlatList
           data={rooms}
           keyExtractor={(room) => room.id}
           renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.roomCard}
+            <Card
               onPress={() =>
                 navigation.navigate('RoomLayout', {
                   roomId: item.id,
                   roomName: item.name,
-                  householdId,
                 })
               }
             >
               <Text style={styles.roomName}>{item.name}</Text>
               <Text style={styles.roomMeta}>{item.photoUrl ? 'Photo mapped' : 'No photo yet'}</Text>
-            </TouchableOpacity>
+            </Card>
           )}
           ListEmptyComponent={
             <Text style={styles.empty}>No rooms yet. Create your first room above.</Text>
           }
         />
       )}
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fc',
-    padding: 20,
+  sectionTitle: {
+    ...typography.sectionTitle,
+    color: colors.ink,
+    marginBottom: spacing.sm,
   },
-  createSection: {
-    marginBottom: 20,
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 14,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#e8e8ef',
-    marginBottom: 10,
-  },
-  createButton: {
-    backgroundColor: '#4a6cf7',
-    padding: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  createButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
+  addButton: {
+    marginBottom: spacing.xl,
   },
   loader: {
-    marginTop: 40,
-  },
-  roomCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 18,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e8e8ef',
+    marginTop: spacing.xxl,
   },
   roomName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a1a2e',
+    color: colors.ink,
   },
   roomMeta: {
     fontSize: 14,
-    color: '#888',
+    color: colors.inkMuted,
     marginTop: 4,
   },
   empty: {
-    color: '#888',
+    color: colors.inkMuted,
     textAlign: 'center',
-    marginTop: 40,
+    marginTop: spacing.xxl,
   },
 });

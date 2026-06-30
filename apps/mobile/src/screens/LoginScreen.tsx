@@ -1,19 +1,11 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  Platform,
-  KeyboardAvoidingView,
-  ScrollView,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
 import type { LoginScreenProps } from '../navigation/types';
 import { useAuth } from '../contexts/AuthContext';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { AuthLayout } from '../components/AuthLayout';
+import { Button, Input } from '../components/ui';
+import { colors, spacing, typography } from '../theme';
 
 export function LoginScreen({ navigation }: LoginScreenProps) {
   const { signIn, signInWithGoogle, signInWithApple } = useAuth();
@@ -62,9 +54,9 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
 
   if (!isSupabaseConfigured()) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Configuration required</Text>
-        <Text style={styles.subtitle}>
+      <View style={styles.configError}>
+        <Text style={styles.configTitle}>Configuration required</Text>
+        <Text style={styles.configSubtitle}>
           Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in your .env file.
         </Text>
       </View>
@@ -72,151 +64,104 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Household Inventory</Text>
-        <Text style={styles.subtitle}>Sign in to manage your home inventory</Text>
+    <AuthLayout>
+      <Text style={styles.subtitle}>Sign in to manage your home inventory</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoComplete="email"
-          value={email}
-          onChangeText={setEmail}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          secureTextEntry
-          autoComplete="password"
-          value={password}
-          onChangeText={setPassword}
-        />
+      <Input
+        placeholder="Email"
+        autoCapitalize="none"
+        keyboardType="email-address"
+        autoComplete="email"
+        value={email}
+        onChangeText={setEmail}
+      />
+      <Input
+        placeholder="Password"
+        secureTextEntry
+        autoComplete="password"
+        value={password}
+        onChangeText={setPassword}
+      />
 
-        <TouchableOpacity style={styles.primaryButton} onPress={handleSignIn} disabled={loading}>
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.primaryButtonText}>Sign in</Text>
-          )}
-        </TouchableOpacity>
+      <Button title="Sign in" onPress={handleSignIn} loading={loading} />
 
-        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
-          <Text style={styles.link}>Forgot password?</Text>
-        </TouchableOpacity>
+      <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
+        <Text style={styles.link}>Forgot password?</Text>
+      </TouchableOpacity>
 
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.dividerLine} />
-        </View>
+      <View style={styles.divider}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>or</Text>
+        <View style={styles.dividerLine} />
+      </View>
 
-        <TouchableOpacity style={styles.ssoButton} onPress={handleGoogle} disabled={loading}>
-          <Text style={styles.ssoButtonText}>Continue with Google</Text>
-        </TouchableOpacity>
+      <Button title="Continue with Google" variant="secondary" onPress={handleGoogle} disabled={loading} />
+      {Platform.OS === 'ios' ? (
+        <Button title="Continue with Apple" variant="secondary" onPress={handleApple} disabled={loading} style={styles.ssoGap} />
+      ) : null}
 
-        {Platform.OS === 'ios' && (
-          <TouchableOpacity style={styles.ssoButton} onPress={handleApple} disabled={loading}>
-            <Text style={styles.ssoButtonText}>Continue with Apple</Text>
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-          <Text style={styles.footerLink}>
-            Don&apos;t have an account? <Text style={styles.footerLinkBold}>Create one</Text>
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+        <Text style={styles.footerLink}>
+          Don&apos;t have an account? <Text style={styles.footerLinkBold}>Create one</Text>
+        </Text>
+      </TouchableOpacity>
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  container: {
-    flexGrow: 1,
-    backgroundColor: '#f8f9fc',
-    padding: 24,
+  configError: {
+    flex: 1,
+    backgroundColor: colors.canvas,
+    padding: spacing.screenPadding,
     justifyContent: 'center',
   },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#1a1a2e',
+  configTitle: {
+    ...typography.heading,
+    color: colors.ink,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 8,
-    marginBottom: 32,
+  configSubtitle: {
+    ...typography.body,
+    color: colors.inkSecondary,
+    marginTop: spacing.sm,
     lineHeight: 24,
   },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 16,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#e8e8ef',
-    marginBottom: 12,
-  },
-  primaryButton: {
-    backgroundColor: '#4a6cf7',
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
+  subtitle: {
+    ...typography.body,
+    color: colors.inkSecondary,
+    marginBottom: spacing.xxl,
+    lineHeight: 24,
   },
   link: {
-    color: '#4a6cf7',
+    color: colors.primaryDeep,
     textAlign: 'center',
-    marginTop: 16,
+    marginTop: spacing.lg,
     fontWeight: '500',
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 24,
-    gap: 12,
+    marginVertical: spacing.xxl,
+    gap: spacing.md,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#e8e8ef',
+    backgroundColor: colors.hairline,
   },
   dividerText: {
-    color: '#888',
+    color: colors.inkMuted,
   },
-  ssoButton: {
-    backgroundColor: '#fff',
-    padding: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e8e8ef',
-    marginBottom: 10,
-  },
-  ssoButtonText: {
-    color: '#1a1a2e',
-    fontWeight: '600',
+  ssoGap: {
+    marginTop: spacing.sm,
   },
   footerLink: {
     textAlign: 'center',
-    marginTop: 24,
-    color: '#666',
+    marginTop: spacing.xxl,
+    color: colors.inkSecondary,
   },
   footerLinkBold: {
-    color: '#4a6cf7',
+    color: colors.primaryDeep,
     fontWeight: '600',
   },
 });

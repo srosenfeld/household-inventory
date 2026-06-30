@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import type { SearchMatch } from '@household-inventory/shared';
+import { colors, spacing, typography } from '../theme';
 
 interface SearchResultCardProps {
   match: SearchMatch;
@@ -9,7 +10,7 @@ interface SearchResultCardProps {
 
 export function SearchResultCard({ match, onPress }: SearchResultCardProps) {
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} disabled={!onPress}>
+    <TouchableOpacity style={styles.card} onPress={onPress} disabled={!onPress} activeOpacity={0.85}>
       <Text style={styles.itemName}>{match.itemName}</Text>
       <Text style={styles.location}>
         {match.roomName} → {match.storageAreaName}
@@ -25,41 +26,41 @@ export function SearchResultCard({ match, onPress }: SearchResultCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: colors.canvas,
+    borderRadius: spacing.cardRadius,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: '#e8e8ef',
+    borderColor: colors.hairline,
   },
   itemName: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#1a1a2e',
+    color: colors.ink,
   },
   location: {
     fontSize: 14,
-    color: '#4a6cf7',
+    color: colors.primaryDeep,
     marginTop: 4,
     fontWeight: '500',
   },
   description: {
     fontSize: 14,
-    color: '#555',
+    color: colors.inkSecondary,
     marginTop: 6,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: spacing.sm,
   },
   category: {
-    fontSize: 12,
-    color: '#666',
+    ...typography.caption,
+    color: colors.inkSecondary,
     textTransform: 'capitalize',
   },
   matchType: {
-    fontSize: 12,
-    color: '#999',
+    ...typography.caption,
+    color: colors.inkMuted,
   },
 });

@@ -1,6 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import type { Item } from '@household-inventory/shared';
+import { resolveApiUrl } from '../config';
+import { colors, spacing } from '../theme';
+import { Chip } from './ui/Chip';
 
 interface ItemCardProps {
   item: Item;
@@ -11,6 +14,7 @@ interface ItemCardProps {
 
 export function ItemCard({ item, onPress, onLongPress, showConfidence }: ItemCardProps) {
   const confidence = item.aiMetadata?.confidence as number | undefined;
+  const thumbUri = item.photoUrl ? resolveApiUrl(item.photoUrl) : null;
 
   return (
     <TouchableOpacity
@@ -18,17 +22,35 @@ export function ItemCard({ item, onPress, onLongPress, showConfidence }: ItemCar
       onPress={onPress}
       onLongPress={onLongPress}
       disabled={!onPress && !onLongPress}
+      activeOpacity={0.85}
     >
-      <View style={styles.header}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.quantity}>×{item.quantity}</Text>
-      </View>
-      {item.description ? <Text style={styles.description}>{item.description}</Text> : null}
-      <View style={styles.footer}>
-        <Text style={styles.category}>{item.category}</Text>
-        {showConfidence && confidence !== undefined && confidence < 0.8 ? (
-          <Text style={styles.lowConfidence}>Low confidence</Text>
-        ) : null}
+      <View style={styles.row}>
+        {thumbUri ? (
+          <Image source={{ uri: thumbUri }} style={styles.thumb} />
+        ) : (
+          <View style={styles.thumbPlaceholder}>
+            <Text style={styles.thumbPlaceholderText}>{item.name[0]?.toUpperCase() ?? '?'}</Text>
+          </View>
+        )}
+        <View style={styles.body}>
+          <View style={styles.header}>
+            <Text style={styles.name} numberOfLines={2}>
+              {item.name}
+            </Text>
+            <Text style={styles.quantity}>×{item.quantity}</Text>
+          </View>
+          {item.description ? (
+            <Text style={styles.description} numberOfLines={2}>
+              {item.description}
+            </Text>
+          ) : null}
+          <View style={styles.footer}>
+            <Chip label={item.category} />
+            {showConfidence && confidence !== undefined && confidence < 0.8 ? (
+              <Text style={styles.lowConfidence}>Low confidence</Text>
+            ) : null}
+          </View>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -36,51 +58,68 @@ export function ItemCard({ item, onPress, onLongPress, showConfidence }: ItemCar
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: colors.canvas,
+    borderRadius: spacing.cardRadius,
+    padding: spacing.md,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: '#e8e8ef',
+    borderColor: colors.hairline,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  thumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    backgroundColor: colors.hairline,
+  },
+  thumbPlaceholder: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thumbPlaceholderText: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.primaryDeep,
+  },
+  body: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   name: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a2e',
+    color: colors.ink,
     flex: 1,
   },
   quantity: {
     fontSize: 14,
-    color: '#666',
-    marginLeft: 8,
+    color: colors.inkSecondary,
+    marginLeft: spacing.sm,
   },
   description: {
     fontSize: 14,
-    color: '#555',
-    marginTop: 6,
+    color: colors.inkSecondary,
+    marginTop: 4,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  category: {
-    fontSize: 12,
-    color: '#4a6cf7',
-    textTransform: 'capitalize',
-    backgroundColor: '#eef2ff',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    overflow: 'hidden',
+    alignItems: 'center',
+    marginTop: spacing.sm,
   },
   lowConfidence: {
     fontSize: 12,
-    color: '#e67e22',
+    color: colors.warning,
   },
 });

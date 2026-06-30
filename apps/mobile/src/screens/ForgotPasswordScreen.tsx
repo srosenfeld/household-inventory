@@ -1,17 +1,9 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { Text, StyleSheet, TouchableOpacity, Alert, View } from 'react-native';
 import type { ForgotPasswordScreenProps } from '../navigation/types';
 import { useAuth } from '../contexts/AuthContext';
+import { Button, Input } from '../components/ui';
+import { colors, spacing, typography } from '../theme';
 
 export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) {
   const { resetPassword } = useAuth();
@@ -37,11 +29,7 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <Text style={styles.title}>Reset password</Text>
+    <View style={styles.container}>
       <Text style={styles.subtitle}>
         Enter your email and we&apos;ll send a link to reset your password.
       </Text>
@@ -54,8 +42,7 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
         </View>
       ) : (
         <>
-          <TextInput
-            style={styles.input}
+          <Input
             placeholder="Email"
             autoCapitalize="none"
             keyboardType="email-address"
@@ -63,78 +50,46 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
             value={email}
             onChangeText={setEmail}
           />
-
-          <TouchableOpacity style={styles.primaryButton} onPress={handleReset} disabled={loading}>
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Send reset link</Text>
-            )}
-          </TouchableOpacity>
+          <Button title="Send reset link" onPress={handleReset} loading={loading} />
         </>
       )}
 
       <TouchableOpacity onPress={() => navigation.navigate('Login')}>
         <Text style={styles.link}>Back to sign in</Text>
       </TouchableOpacity>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fc',
-    padding: 24,
-    paddingTop: 48,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1a1a2e',
+    backgroundColor: colors.canvasSoft,
+    padding: spacing.screenPadding,
+    paddingTop: spacing.lg,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 8,
-    marginBottom: 24,
+    ...typography.body,
+    color: colors.inkSecondary,
+    marginBottom: spacing.xl,
     lineHeight: 24,
   },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 16,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#e8e8ef',
-    marginBottom: 12,
-  },
-  primaryButton: {
-    backgroundColor: '#4a6cf7',
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
-  },
   successBox: {
-    backgroundColor: '#eef2ff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: colors.primarySoft,
+    borderRadius: spacing.cardRadius,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.hairline,
   },
   successText: {
-    color: '#1a1a2e',
+    color: colors.ink,
     lineHeight: 22,
   },
   link: {
-    color: '#4a6cf7',
+    color: colors.primaryDeep,
     textAlign: 'center',
-    marginTop: 24,
+    marginTop: spacing.xxl,
     fontWeight: '500',
   },
 });

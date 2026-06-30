@@ -15,6 +15,7 @@ import { scanRoutes } from './routes/scan';
 import { searchRoutes } from './routes/search';
 import { uploadRoutes } from './routes/upload';
 import { integrationRoutes } from './routes/integrations';
+import { oiRoutes } from './routes/oi';
 import { requireAuth } from './middleware/auth';
 
 const uploadDir = path.resolve(process.cwd(), process.env.UPLOAD_DIR ?? 'uploads');
@@ -74,6 +75,7 @@ async function main() {
   await app.register(searchRoutes);
   await app.register(uploadRoutes);
   await app.register(integrationRoutes);
+  await app.register(oiRoutes);
 
   await app.listen({ port, host: '0.0.0.0' });
   console.log(`API listening on http://localhost:${port}`);

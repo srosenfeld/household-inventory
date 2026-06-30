@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, Alert, Platform } from 'react-native';
 import type { CaptureScreenProps } from '../navigation/types';
 import { takePhoto, pickImageFromLibrary } from '../services/camera';
 import { api } from '../services/api';
+import { Button, ScreenContainer } from '../components/ui';
+import { colors, spacing, typography } from '../theme';
 
 export function CaptureScreen({ navigation, route }: CaptureScreenProps) {
   const { storageAreaId, storageAreaName, roomName, roomId } = route.params;
@@ -44,7 +46,7 @@ export function CaptureScreen({ navigation, route }: CaptureScreenProps) {
   };
 
   return (
-    <View style={styles.container}>
+    <ScreenContainer>
       <Text style={styles.title}>Scan {storageAreaName}</Text>
       <Text style={styles.subtitle}>Photograph the contents of this storage area</Text>
 
@@ -57,92 +59,70 @@ export function CaptureScreen({ navigation, route }: CaptureScreenProps) {
       )}
 
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.button} onPress={handleCapture}>
-          <Text style={styles.buttonText}>Take photo</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={handlePick}>
-          <Text style={styles.buttonText}>Choose from library</Text>
-        </TouchableOpacity>
+        {Platform.OS !== 'web' ? (
+          <Button title="Take photo" variant="secondary" onPress={handleCapture} style={styles.actionBtn} />
+        ) : null}
+        <Button
+          title={Platform.OS === 'web' ? 'Choose photo' : 'From library'}
+          variant="secondary"
+          onPress={handlePick}
+          style={styles.actionBtn}
+        />
       </View>
 
-      <TouchableOpacity
-        style={[styles.scanButton, !photoUri && styles.disabled]}
+      <Button
+        title="Identify items with AI"
         onPress={handleScan}
-        disabled={!photoUri || scanning}
-      >
-        {scanning ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.scanButtonText}>Identify items with AI</Text>
-        )}
-      </TouchableOpacity>
-    </View>
+        loading={scanning}
+        disabled={!photoUri}
+        style={styles.scanButton}
+      />
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fc',
-    padding: 20,
-  },
   title: {
+    ...typography.sectionTitle,
     fontSize: 22,
-    fontWeight: '700',
-    color: '#1a1a2e',
+    color: colors.ink,
   },
   subtitle: {
-    fontSize: 15,
-    color: '#666',
-    marginTop: 4,
-    marginBottom: 20,
+    ...typography.body,
+    color: colors.inkSecondary,
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
   },
   preview: {
     width: '100%',
     height: 280,
-    borderRadius: 12,
-    backgroundColor: '#e8e8ef',
+    borderRadius: spacing.cardRadius,
+    backgroundColor: colors.hairline,
+    borderWidth: 1,
+    borderColor: colors.hairlineStrong,
   },
   placeholder: {
     width: '100%',
     height: 280,
-    borderRadius: 12,
-    backgroundColor: '#e8e8ef',
+    borderRadius: spacing.cardRadius,
+    backgroundColor: colors.hairline,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.hairlineStrong,
   },
   placeholderText: {
-    color: '#888',
+    color: colors.inkMuted,
   },
   actions: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 16,
+    gap: spacing.sm,
+    marginTop: spacing.lg,
   },
-  button: {
+  actionBtn: {
     flex: 1,
-    backgroundColor: '#1a1a2e',
-    padding: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
   },
   scanButton: {
-    backgroundColor: '#4a6cf7',
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  scanButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
+    marginTop: spacing.lg,
   },
 });

@@ -16,8 +16,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import type { StorageArea, StorageAreaType } from '@household-inventory/shared';
 import { STORAGE_AREA_TYPES } from '@household-inventory/shared';
+import { colors, spacing, typography } from '../theme';
 
-export interface LayoutZone extends Pick<StorageArea, 'id' | 'name' | 'type' | 'x' | 'y' | 'width' | 'height'> {}
+export interface LayoutZone
+  extends Pick<StorageArea, 'id' | 'name' | 'type' | 'x' | 'y' | 'width' | 'height' | 'photoUrl'> {}
 
 interface LayoutCanvasProps {
   photoUri: string | null;
@@ -27,17 +29,19 @@ interface LayoutCanvasProps {
   onUpdateZone: (id: string, updates: Partial<LayoutZone>) => void;
   onAddZone: (zone: Omit<LayoutZone, 'id' | 'name'>) => void;
   onGestureActiveChange?: (active: boolean) => void;
+  showAddButton?: boolean;
+  compact?: boolean;
 }
 
 const ZONE_COLORS: Record<StorageAreaType, string> = {
-  shelf: 'rgba(74, 108, 247, 0.35)',
-  bin: 'rgba(46, 204, 113, 0.35)',
-  drawer: 'rgba(155, 89, 182, 0.35)',
-  dresser: 'rgba(241, 196, 15, 0.35)',
-  cabinet: 'rgba(52, 152, 219, 0.35)',
-  closet: 'rgba(231, 76, 60, 0.35)',
-  desk: 'rgba(26, 188, 156, 0.35)',
-  other: 'rgba(149, 165, 166, 0.35)',
+  shelf: 'rgba(62, 207, 142, 0.25)',
+  bin: 'rgba(36, 180, 126, 0.22)',
+  drawer: 'rgba(107, 1, 194, 0.15)',
+  dresser: 'rgba(247, 104, 8, 0.18)',
+  cabinet: 'rgba(62, 207, 142, 0.18)',
+  closet: 'rgba(229, 72, 77, 0.15)',
+  desk: 'rgba(36, 180, 126, 0.28)',
+  other: 'rgba(112, 112, 112, 0.2)',
 };
 
 const MIN_FRAC = 0.08;
@@ -170,7 +174,7 @@ function DraggableZone({
           animatedStyle,
           {
             backgroundColor: ZONE_COLORS[zone.type as StorageAreaType] ?? ZONE_COLORS.other,
-            borderColor: isSelected ? '#4a6cf7' : 'rgba(255,255,255,0.8)',
+            borderColor: isSelected ? colors.primary : 'rgba(255,255,255,0.9)',
             borderWidth: isSelected ? 2 : 1,
           },
         ]}
@@ -193,6 +197,8 @@ export function LayoutCanvas({
   onUpdateZone,
   onAddZone,
   onGestureActiveChange,
+  showAddButton = true,
+  compact = false,
 }: LayoutCanvasProps) {
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
@@ -212,6 +218,7 @@ export function LayoutCanvas({
             y: 0.1,
             width: 0.3,
             height: 0.2,
+            photoUrl: null,
           });
         },
       })),
@@ -220,8 +227,12 @@ export function LayoutCanvas({
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.canvas} onLayout={onLayout}>
+    <View style={[styles.container, compact && styles.containerCompact]}>
+      <View
+        style={[styles.canvas, compact && styles.canvasCompact]}
+        onLayout={onLayout}
+        collapsable={false}
+      >
         {photoUri ? (
           <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
         ) : (
@@ -245,9 +256,11 @@ export function LayoutCanvas({
           ))}
       </View>
 
-      <TouchableOpacity style={styles.addButton} onPress={handleAddZone}>
-        <Text style={styles.addButtonText}>+ Add storage area</Text>
-      </TouchableOpacity>
+      {showAddButton ? (
+        <TouchableOpacity style={styles.addButton} onPress={handleAddZone}>
+          <Text style={styles.addButtonText}>+ Add storage area</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -256,30 +269,38 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  containerCompact: {
+    flexGrow: 0,
+    flexShrink: 0,
+    width: '100%',
+  },
   canvas: {
     flex: 1,
-    backgroundColor: '#f0f0f5',
-    borderRadius: 12,
+    backgroundColor: colors.canvasSoft,
+    borderRadius: spacing.cardRadius,
     overflow: 'hidden',
     position: 'relative',
+    borderWidth: 1,
+    borderColor: colors.hairline,
+  },
+  canvasCompact: {
+    flexGrow: 0,
+    flexShrink: 0,
+    height: 220,
+    minHeight: 220,
+    width: '100%',
   },
   photo: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
+    ...StyleSheet.absoluteFillObject,
   },
   placeholder: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#e8e8ef',
+    backgroundColor: colors.hairline,
   },
   placeholderText: {
-    color: '#666',
+    color: colors.inkSecondary,
     fontSize: 16,
   },
   zone: {
@@ -295,29 +316,29 @@ const styles = StyleSheet.create({
   zoneLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#1a1a2e',
+    color: colors.ink,
     textAlign: 'center',
   },
   zoneType: {
     fontSize: 9,
-    color: '#333',
+    color: colors.inkSecondary,
     textTransform: 'capitalize',
   },
   zoneHint: {
     fontSize: 8,
-    color: '#4a6cf7',
+    color: colors.primaryDeep,
     marginTop: 2,
     textAlign: 'center',
   },
   addButton: {
-    marginTop: 12,
-    backgroundColor: '#4a6cf7',
+    marginTop: spacing.md,
+    backgroundColor: colors.primary,
     padding: 14,
-    borderRadius: 10,
+    borderRadius: spacing.buttonRadius,
     alignItems: 'center',
   },
   addButtonText: {
-    color: '#fff',
+    color: colors.ink,
     fontWeight: '600',
     fontSize: 16,
   },

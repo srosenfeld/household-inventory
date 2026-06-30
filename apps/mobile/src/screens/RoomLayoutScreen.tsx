@@ -5,17 +5,21 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   Alert,
   ActivityIndicator,
+  FlatList,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { RoomLayoutScreenProps } from '../navigation/types';
+import { STORAGE_AREA_TYPES } from '@household-inventory/shared';
 import { api } from '../services/api';
 import { pickImageFromLibrary } from '../services/camera';
 import { LayoutCanvas, type LayoutZone } from '../components/LayoutCanvas';
+import { PhotoThumbnail } from '../components/PhotoThumbnail';
 import type { StorageArea } from '@household-inventory/shared';
 import { resolveApiUrl } from '../config';
+import { Button, Input } from '../components/ui';
+import { colors, spacing, typography } from '../theme';
 
 function tempId() {
   return `temp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -23,6 +27,11 @@ function tempId() {
 
 function isPersistedId(id: string) {
   return !id.startsWith('temp-');
+}
+
+function zonePhotoUri(zone: LayoutZone): string | null {
+  if (!zone.photoUrl) return null;
+  return resolveApiUrl(zone.photoUrl);
 }
 
 export function RoomLayoutScreen({ navigation, route }: RoomLayoutScreenProps) {
@@ -34,6 +43,8 @@ export function RoomLayoutScreen({ navigation, route }: RoomLayoutScreenProps) {
   const [zoneName, setZoneName] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [zonePhotoSaving, setZonePhotoSaving] = useState(false);
+  const [mapExpanded, setMapExpanded] = useState(false);
   const [canvasGestureActive, setCanvasGestureActive] = useState(false);
 
   const loadRoom = useCallback(async () => {
@@ -52,6 +63,7 @@ export function RoomLayoutScreen({ navigation, route }: RoomLayoutScreenProps) {
         y: a.y,
         width: a.width,
         height: a.height,
+        photoUrl: a.photoUrl,
       }));
       setZones(mapped);
       setSelectedZoneId((current) => {
@@ -92,7 +104,7 @@ export function RoomLayoutScreen({ navigation, route }: RoomLayoutScreenProps) {
     [zones]
   );
 
-  const handlePickPhoto = async () => {
+  const handlePickRoomPhoto = async () => {
     let uri: string | null;
     try {
       uri = await pickImageFromLibrary();
@@ -121,10 +133,20 @@ export function RoomLayoutScreen({ navigation, route }: RoomLayoutScreenProps) {
     }
   };
 
-  const handleAddZone = async (partial: Omit<LayoutZone, 'id' | 'name'>) => {
+  const promptAddZone = () => {
+    Alert.alert('Add storage area', 'Choose a type', [
+      ...STORAGE_AREA_TYPES.map((type) => ({
+        text: type,
+        onPress: () => handleAddZone({ type, x: 0.1, y: 0.1, width: 0.3, height: 0.2 }),
+      })),
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const handleAddZone = async (partial: Omit<LayoutZone, 'id' | 'name' | 'photoUrl'>) => {
     const id = tempId();
     const name = `${partial.type} ${zones.length + 1}`;
-    const newZone: LayoutZone = { id, name, ...partial };
+    const newZone: LayoutZone = { id, name, photoUrl: null, ...partial };
     setZones((prev) => [...prev, newZone]);
     setSelectedZoneId(id);
     setZoneName(name);
@@ -157,6 +179,32 @@ export function RoomLayoutScreen({ navigation, route }: RoomLayoutScreenProps) {
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to update storage area');
       loadRoom();
+    }
+  };
+
+  const handleZonePhoto = async (zoneId: string) => {
+    if (!isPersistedId(zoneId)) {
+      Alert.alert('Saving…', 'Wait for the storage area to finish saving.');
+      return;
+    }
+
+    let uri: string | null;
+    try {
+      uri = await pickImageFromLibrary();
+    } catch (err) {
+      Alert.alert('Permission needed', err instanceof Error ? err.message : 'Cannot access photos');
+      return;
+    }
+    if (!uri) return;
+
+    setZonePhotoSaving(true);
+    try {
+      const updated = await api.updateStorageArea(zoneId, { photoUri: uri });
+      setZones((prev) => prev.map((z) => (z.id === zoneId ? { ...z, photoUrl: updated.photoUrl } : z)));
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to save photo');
+    } finally {
+      setZonePhotoSaving(false);
     }
   };
 
@@ -228,110 +276,168 @@ export function RoomLayoutScreen({ navigation, route }: RoomLayoutScreenProps) {
     });
   };
 
+  const renderZoneEditor = () => {
+    if (!selectedZone) return null;
+
+    return (
+      <View style={styles.zoneEditor}>
+        <Text style={styles.zoneEditorTitle}>Edit storage area</Text>
+        <View style={styles.zoneEditorRow}>
+          <PhotoThumbnail
+            uri={zonePhotoUri(selectedZone)}
+            onPress={() => handleZonePhoto(selectedZone.id)}
+            label="Area photo"
+            loading={zonePhotoSaving}
+          />
+          <View style={styles.zoneEditorFields}>
+            <TextInput
+              style={styles.zoneNameInput}
+              value={zoneName}
+              onChangeText={setZoneName}
+              placeholder="Storage area name"
+              placeholderTextColor={colors.inkMuted}
+            />
+            <Text style={styles.zoneTypeLabel}>{selectedZone.type}</Text>
+          </View>
+        </View>
+        <View style={styles.zoneActions}>
+          <TouchableOpacity style={styles.smallButton} onPress={handleSaveZoneName}>
+            <Text style={styles.smallButtonText}>Save name</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.smallButton} onPress={handleSuggestNames}>
+            <Text style={styles.smallButtonText}>Suggest names</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.smallButton, styles.primarySmall]}
+            onPress={() => handleOpenZone(selectedZone)}
+          >
+            <Text style={[styles.smallButtonText, styles.primarySmallText]}>Open & inventory</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.smallButton, styles.dangerSmall]} onPress={handleDeleteZone}>
+            <Text style={[styles.smallButtonText, styles.dangerSmallText]}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  const renderListHeader = () => (
+    <View>
+      <View style={styles.listHeaderRow}>
+        <Text style={styles.sectionTitle}>Storage areas ({zones.length})</Text>
+        <Button title="+ Add" onPress={promptAddZone} style={styles.addZoneBtn} />
+      </View>
+      <Text style={styles.sectionHint}>
+        Select a storage area to edit, add a photo, or open its inventory.
+      </Text>
+    </View>
+  );
+
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#4a6cf7" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        style={styles.headerScroll}
-        contentContainerStyle={styles.headerContent}
-        scrollEnabled={!canvasGestureActive}
-        keyboardShouldPersistTaps="handled"
-      >
-        <TextInput
-          style={styles.input}
-          value={roomName}
-          onChangeText={setRoomName}
-          onBlur={handleSaveRoomName}
-          placeholder="Room name"
-        />
+      <View style={styles.topSection}>
+        <View style={styles.roomHeader}>
+          <Input
+            style={styles.roomNameInput}
+            value={roomName}
+            onChangeText={setRoomName}
+            onBlur={handleSaveRoomName}
+            placeholder="Room name"
+          />
+          <PhotoThumbnail
+            uri={photoUri}
+            onPress={handlePickRoomPhoto}
+            label="Room photo"
+            size={64}
+            loading={saving}
+          />
+        </View>
 
-        <TouchableOpacity style={styles.photoButton} onPress={handlePickPhoto} disabled={saving}>
-          <Text style={styles.photoButtonText}>
-            {photoUri ? 'Change room photo' : 'Add room photo'}
+        <TouchableOpacity
+          style={styles.mapToggle}
+          onPress={() => setMapExpanded((v) => !v)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: mapExpanded }}
+        >
+          <Text style={styles.mapToggleText}>
+            {mapExpanded ? 'Hide room map' : 'Show room map'}
+          </Text>
+          <Text style={styles.mapToggleHint}>
+            {photoUri ? 'Tap zones on the photo to select' : 'Add a room photo to place storage areas'}
           </Text>
         </TouchableOpacity>
-      </ScrollView>
 
-      <View style={styles.canvasWrapper}>
-        <LayoutCanvas
-          photoUri={photoUri}
-          zones={zones}
-          selectedZoneId={selectedZoneId}
-          onSelectZone={handleSelectZone}
-          onUpdateZone={handleUpdateZone}
-          onAddZone={handleAddZone}
-          onGestureActiveChange={setCanvasGestureActive}
-        />
+        {mapExpanded ? (
+          <View style={styles.mapSection} key="room-map">
+            {!photoUri ? (
+              <Button
+                title="Add room photo"
+                variant="secondary"
+                onPress={handlePickRoomPhoto}
+                disabled={saving}
+              />
+            ) : null}
+            <LayoutCanvas
+              photoUri={photoUri}
+              zones={zones}
+              selectedZoneId={selectedZoneId}
+              onSelectZone={handleSelectZone}
+              onUpdateZone={handleUpdateZone}
+              onAddZone={handleAddZone}
+              onGestureActiveChange={setCanvasGestureActive}
+              showAddButton={false}
+              compact
+            />
+          </View>
+        ) : null}
       </View>
 
-      <ScrollView
-        style={styles.editorScroll}
-        contentContainerStyle={styles.editorContent}
+      <FlatList
+        style={styles.list}
+        data={zones}
+        keyExtractor={(zone) => zone.id}
         scrollEnabled={!canvasGestureActive}
         keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.sectionTitle}>Storage areas ({zones.length})</Text>
-        <Text style={styles.sectionHint}>Tap a zone on the photo or below to edit. Pinch with two fingers to resize.</Text>
-
-        {zones.map((zone) => (
+        contentContainerStyle={styles.listContent}
+        ListHeaderComponent={renderListHeader}
+        ListFooterComponent={renderZoneEditor}
+        extraData={{ mapExpanded, selectedZoneId, zonePhotoSaving, zones }}
+        ListEmptyComponent={
+          <Text style={styles.emptyZones}>No storage areas yet. Tap "+ Add" above.</Text>
+        }
+        renderItem={({ item: zone }) => (
           <TouchableOpacity
-            key={zone.id}
             style={[styles.zoneRow, selectedZoneId === zone.id && styles.zoneRowSelected]}
             onPress={() => handleSelectZone(zone.id)}
           >
+            <PhotoThumbnail
+              uri={zonePhotoUri(zone)}
+              onPress={() => {
+                handleSelectZone(zone.id);
+                handleZonePhoto(zone.id);
+              }}
+              label="Photo"
+              size={52}
+              loading={zonePhotoSaving && selectedZoneId === zone.id}
+            />
             <View style={styles.zoneRowText}>
               <Text style={styles.zoneRowName}>{zone.name}</Text>
               <Text style={styles.zoneRowMeta}>{zone.type}</Text>
             </View>
-            <TouchableOpacity
-              style={styles.zoneRowOpen}
-              onPress={() => handleOpenZone(zone)}
-            >
+            <TouchableOpacity style={styles.zoneRowOpen} onPress={() => handleOpenZone(zone)}>
               <Text style={styles.zoneRowOpenText}>Items</Text>
             </TouchableOpacity>
           </TouchableOpacity>
-        ))}
-
-        {zones.length === 0 ? (
-          <Text style={styles.emptyZones}>No storage areas yet. Tap "+ Add storage area" above.</Text>
-        ) : null}
-
-        {selectedZone ? (
-          <View style={styles.zoneEditor}>
-            <Text style={styles.zoneEditorTitle}>Edit storage area</Text>
-            <TextInput
-              style={styles.input}
-              value={zoneName}
-              onChangeText={setZoneName}
-              placeholder="Storage area name"
-            />
-            <View style={styles.zoneActions}>
-              <TouchableOpacity style={styles.smallButton} onPress={handleSaveZoneName}>
-                <Text style={styles.smallButtonText}>Save name</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.smallButton} onPress={handleSuggestNames}>
-                <Text style={styles.smallButtonText}>Suggest names</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.smallButton, styles.primarySmall]}
-                onPress={() => handleOpenZone(selectedZone)}
-              >
-                <Text style={[styles.smallButtonText, styles.primarySmallText]}>Open & inventory</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.smallButton, styles.dangerSmall]} onPress={handleDeleteZone}>
-                <Text style={[styles.smallButtonText, styles.dangerSmallText]}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : null}
-      </ScrollView>
+        )}
+      />
     </View>
   );
 }
@@ -339,75 +445,97 @@ export function RoomLayoutScreen({ navigation, route }: RoomLayoutScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fc',
+    backgroundColor: colors.canvasSoft,
   },
-  headerScroll: {
-    flexGrow: 0,
+  topSection: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.hairline,
+    backgroundColor: colors.canvasSoft,
   },
-  headerContent: {
-    padding: 16,
-    paddingBottom: 8,
-  },
-  editorScroll: {
+  list: {
     flex: 1,
   },
-  editorContent: {
-    padding: 16,
-    paddingTop: 8,
+  listContent: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
     paddingBottom: 40,
   },
   centered: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.canvasSoft,
   },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 14,
-    fontSize: 16,
+  roomHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  roomNameInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  mapToggle: {
+    backgroundColor: colors.canvas,
+    borderRadius: spacing.buttonRadius,
+    padding: spacing.md,
     borderWidth: 1,
-    borderColor: '#e8e8ef',
-    marginBottom: 10,
+    borderColor: colors.hairline,
+    marginBottom: spacing.md,
   },
-  photoButton: {
-    backgroundColor: '#1a1a2e',
-    padding: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  photoButtonText: {
-    color: '#fff',
+  mapToggleText: {
+    ...typography.bodyMedium,
+    color: colors.primaryDeep,
     fontWeight: '600',
   },
-  canvasWrapper: {
-    height: 360,
-    paddingHorizontal: 16,
+  mapToggleHint: {
+    ...typography.caption,
+    color: colors.inkMuted,
+    marginTop: 2,
+  },
+  mapSection: {
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+    width: '100%',
+  },
+  listHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  addZoneBtn: {
+    paddingHorizontal: spacing.lg,
+    minHeight: 40,
+    paddingVertical: spacing.sm,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1a1a2e',
-    marginBottom: 4,
+    ...typography.sectionTitle,
+    color: colors.ink,
   },
   sectionHint: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 12,
+    ...typography.caption,
+    color: colors.inkSecondary,
+    marginBottom: spacing.md,
   },
   zoneRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 8,
+    backgroundColor: colors.canvas,
+    borderRadius: spacing.buttonRadius,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: '#e8e8ef',
+    borderColor: colors.hairline,
+    gap: spacing.md,
   },
   zoneRowSelected: {
-    borderColor: '#4a6cf7',
-    backgroundColor: '#f0f4ff',
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySoft,
   },
   zoneRowText: {
     flex: 1,
@@ -415,71 +543,94 @@ const styles = StyleSheet.create({
   zoneRowName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a2e',
+    color: colors.ink,
   },
   zoneRowMeta: {
     fontSize: 13,
-    color: '#888',
+    color: colors.inkMuted,
     textTransform: 'capitalize',
     marginTop: 2,
   },
   zoneRowOpen: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#4a6cf7',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: spacing.buttonRadius,
+    backgroundColor: colors.primary,
   },
   zoneRowOpenText: {
-    color: '#fff',
+    color: colors.ink,
     fontWeight: '600',
     fontSize: 13,
   },
   emptyZones: {
-    color: '#888',
+    color: colors.inkMuted,
     textAlign: 'center',
-    marginVertical: 16,
+    marginVertical: spacing.lg,
   },
   zoneEditor: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: colors.canvas,
+    borderRadius: spacing.cardRadius,
+    padding: spacing.lg,
     borderWidth: 1,
-    borderColor: '#e8e8ef',
-    marginTop: 12,
+    borderColor: colors.hairline,
+    marginTop: spacing.md,
   },
   zoneEditorTitle: {
-    fontSize: 16,
+    ...typography.bodyMedium,
     fontWeight: '600',
-    marginBottom: 10,
-    color: '#1a1a2e',
+    marginBottom: spacing.md,
+    color: colors.ink,
+  },
+  zoneEditorRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    alignItems: 'flex-start',
+  },
+  zoneEditorFields: {
+    flex: 1,
+  },
+  zoneNameInput: {
+    backgroundColor: colors.canvasSoft,
+    borderRadius: spacing.inputRadius,
+    padding: 14,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    marginBottom: spacing.xs,
+    color: colors.ink,
+  },
+  zoneTypeLabel: {
+    ...typography.caption,
+    color: colors.inkMuted,
+    textTransform: 'capitalize',
   },
   zoneActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
+    gap: spacing.sm,
+    marginTop: spacing.md,
   },
   smallButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#eef2ff',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: spacing.buttonRadius,
+    backgroundColor: colors.primarySoft,
   },
   smallButtonText: {
-    color: '#4a6cf7',
+    color: colors.primaryDeep,
     fontWeight: '600',
     fontSize: 13,
   },
   primarySmall: {
-    backgroundColor: '#4a6cf7',
+    backgroundColor: colors.primary,
   },
   primarySmallText: {
-    color: '#fff',
+    color: colors.ink,
   },
   dangerSmall: {
-    backgroundColor: '#fdecea',
+    backgroundColor: colors.destructiveSoft,
   },
   dangerSmallText: {
-    color: '#e74c3c',
+    color: colors.destructive,
   },
 });

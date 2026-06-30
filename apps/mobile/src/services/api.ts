@@ -1,9 +1,11 @@
 import { API_BASE_URL } from '../config';
 import { getAccessToken } from './auth-token';
+import { appendPhotoToFormData } from '../lib/upload';
 import type {
   DraftItem,
   Household,
   Item,
+  OrganizationalIntelligence,
   Room,
   SearchResponse,
   StorageArea,
@@ -40,11 +42,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 async function uploadPhoto(uri: string): Promise<string> {
   const token = await getAccessToken();
   const formData = new FormData();
-  formData.append('photo', {
-    uri,
-    name: 'photo.jpg',
-    type: 'image/jpeg',
-  } as unknown as Blob);
+  await appendPhotoToFormData(formData, uri, 'photo', 'photo.jpg');
 
   const response = await fetch(`${API_BASE_URL}/upload`, {
     method: 'POST',
@@ -70,6 +68,8 @@ export const api = {
   createHousehold: (name: string) =>
     request<Household>('/households', { method: 'POST', body: JSON.stringify({ name }) }),
   getHousehold: (id: string) => request<Household>(`/households/${id}`),
+  getOrganizationalIntelligence: (householdId: string) =>
+    request<OrganizationalIntelligence>(`/households/${householdId}/organizational-intelligence`),
 
   getRooms: (householdId: string) => request<Room[]>(`/rooms?householdId=${householdId}`),
   createRoom: async (data: { householdId: string; name: string; photoUri?: string }) => {
@@ -100,11 +100,19 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  updateStorageArea: (id: string, data: Partial<StorageArea>) =>
-    request<StorageArea>(`/storage-areas/${id}`, {
+  getStorageArea: (id: string) => request<StorageArea>(`/storage-areas/${id}`),
+  updateStorageArea: async (
+    id: string,
+    data: Partial<StorageArea> & { photoUri?: string }
+  ) => {
+    const { photoUri, ...rest } = data;
+    const payload: Record<string, unknown> = { ...rest };
+    if (photoUri) payload.photoUrl = await uploadPhoto(photoUri);
+    return request<StorageArea>(`/storage-areas/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(data),
-    }),
+      body: JSON.stringify(payload),
+    });
+  },
   deleteStorageArea: (id: string) =>
     request<{ success: boolean }>(`/storage-areas/${id}`, { method: 'DELETE' }),
   suggestStorageAreaNames: (id: string, type?: string, context?: string) =>
@@ -125,19 +133,19 @@ export const api = {
     category: string;
     quantity?: number;
   }) => request<Item>('/items', { method: 'POST', body: JSON.stringify(data) }),
-  updateItem: (id: string, data: Partial<Item>) =>
-    request<Item>(`/items/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  updateItem: async (id: string, data: Partial<Item> & { photoUri?: string }) => {
+    const { photoUri, ...rest } = data;
+    const payload: Record<string, unknown> = { ...rest };
+    if (photoUri) payload.photoUrl = await uploadPhoto(photoUri);
+    return request<Item>(`/items/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+  },
   deleteItem: (id: string) =>
     request<{ success: boolean }>(`/items/${id}`, { method: 'DELETE' }),
 
   scanStorageArea: async (storageAreaId: string, uri: string): Promise<{ scanJobId: string; items: DraftItem[] }> => {
     const token = await getAccessToken();
     const formData = new FormData();
-    formData.append('photo', {
-      uri,
-      name: 'scan.jpg',
-      type: 'image/jpeg',
-    } as unknown as Blob);
+    await appendPhotoToFormData(formData, uri, 'photo', 'scan.jpg');
 
     const response = await fetch(`${API_BASE_URL}/storage-areas/${storageAreaId}/scan`, {
       method: 'POST',

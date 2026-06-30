@@ -1,17 +1,12 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { Text, StyleSheet, Alert } from 'react-native';
 import type { CreateHouseholdScreenProps } from '../navigation/types';
 import { api } from '../services/api';
+import { AuthLayout } from '../components/AuthLayout';
+import { Button, Input } from '../components/ui';
+import { colors, spacing, typography } from '../theme';
 
-export function CreateHouseholdScreen({ navigation }: CreateHouseholdScreenProps) {
+export function CreateHouseholdScreen({ onComplete }: CreateHouseholdScreenProps) {
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
 
@@ -24,10 +19,7 @@ export function CreateHouseholdScreen({ navigation }: CreateHouseholdScreenProps
     setCreating(true);
     try {
       const household = await api.createHousehold(name.trim());
-      navigation.replace('Home', {
-        householdId: household.id,
-        householdName: household.name,
-      });
+      onComplete?.(household.id, household.name);
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to create household');
     } finally {
@@ -36,65 +28,31 @@ export function CreateHouseholdScreen({ navigation }: CreateHouseholdScreenProps
   };
 
   return (
-    <View style={styles.container}>
+    <AuthLayout scrollProps={{ contentContainerStyle: styles.scroll }}>
       <Text style={styles.title}>Welcome</Text>
       <Text style={styles.subtitle}>Create your household to start mapping rooms and inventory</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Household name (e.g. My Home)"
-        value={name}
-        onChangeText={setName}
-      />
+      <Input placeholder="Household name (e.g. My Home)" value={name} onChangeText={setName} />
 
-      <TouchableOpacity style={styles.button} onPress={handleCreate} disabled={creating}>
-        {creating ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Get started</Text>
-        )}
-      </TouchableOpacity>
-    </View>
+      <Button title="Get started" onPress={handleCreate} loading={creating} />
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fc',
-    padding: 24,
+  scroll: {
     justifyContent: 'center',
+    flexGrow: 1,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#1a1a2e',
+    ...typography.title,
+    color: colors.ink,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 8,
-    marginBottom: 32,
+    ...typography.body,
+    color: colors.inkSecondary,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xxl,
     lineHeight: 24,
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 16,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#e8e8ef',
-    marginBottom: 16,
-  },
-  button: {
-    backgroundColor: '#4a6cf7',
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
   },
 });

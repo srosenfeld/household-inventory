@@ -9,6 +9,7 @@
   "scripts": {
     "dev:api": "npm run dev -w @household-inventory/api",
     "dev:mobile": "npm run start -w @household-inventory/mobile",
+    "dev:web": "npm run web -w @household-inventory/mobile",
     "build": "npm run build -w @household-inventory/shared && npm run build -w @household-inventory/api",
     "db:migrate": "npm run db:migrate -w @household-inventory/api"
   },

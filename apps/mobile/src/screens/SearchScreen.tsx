@@ -3,8 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
-  TouchableOpacity,
   FlatList,
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -12,11 +10,14 @@ import {
 } from 'react-native';
 import type { SearchScreenProps } from '../navigation/types';
 import type { SearchResponse } from '@household-inventory/shared';
+import { useHousehold } from '../contexts/HouseholdContext';
 import { api } from '../services/api';
 import { SearchResultCard } from '../components/SearchResultCard';
+import { Button, Input, ScreenContainer } from '../components/ui';
+import { colors, spacing, typography } from '../theme';
 
-export function SearchScreen({ navigation, route }: SearchScreenProps) {
-  const { householdId } = route.params;
+export function SearchScreen({ navigation }: SearchScreenProps) {
+  const { householdId } = useHousehold();
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<SearchResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -36,113 +37,125 @@ export function SearchScreen({ navigation, route }: SearchScreenProps) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <Text style={styles.title}>Find an item</Text>
-      <Text style={styles.subtitle}>Ask where something is stored in your home</Text>
+    <ScreenContainer padded={false}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.inner}>
+          <Text style={styles.subtitle}>Ask where something is stored in your home</Text>
 
-      <View style={styles.searchRow}>
-        <TextInput
-          style={styles.input}
-          placeholder='e.g. "Where is my hammer?"'
-          value={query}
-          onChangeText={setQuery}
-          onSubmitEditing={handleSearch}
-          returnKeyType="search"
-        />
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearch} disabled={loading}>
-          {loading ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text style={styles.searchButtonText}>Search</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {result ? (
-        <View style={styles.resultSection}>
-          <View style={styles.messageBox}>
-            <Text style={styles.message}>{result.message}</Text>
+          <View style={styles.searchRow}>
+            <Input
+              style={styles.searchInput}
+              placeholder='e.g. "Where is my hammer?"'
+              value={query}
+              onChangeText={setQuery}
+              onSubmitEditing={handleSearch}
+              returnKeyType="search"
+            />
+            <Button
+              title="Search"
+              onPress={handleSearch}
+              loading={loading}
+              style={styles.searchBtn}
+            />
           </View>
 
-          <FlatList
-            data={result.matches}
-            keyExtractor={(item) => item.itemId}
-            renderItem={({ item }) => (
-              <SearchResultCard
-                match={item}
-                onPress={() =>
-                  navigation.navigate('ItemDetail', {
-                    itemId: item.itemId,
-                    storageAreaName: item.storageAreaName,
-                    roomName: item.roomName,
-                  })
-                }
+          {result ? (
+            <View style={styles.resultSection}>
+              <View style={styles.messageBox}>
+                <Text style={styles.message}>{result.message}</Text>
+              </View>
+
+              <FlatList
+                data={result.matches}
+                keyExtractor={(item) => item.itemId}
+                renderItem={({ item }) => (
+                  <SearchResultCard
+                    match={item}
+                    onPress={() =>
+                      navigation.navigate('ItemDetail', {
+                        itemId: item.itemId,
+                        storageAreaName: item.storageAreaName,
+                        roomName: item.roomName,
+                      })
+                    }
+                  />
+                )}
               />
-            )}
-            ListEmptyComponent={null}
-          />
+            </View>
+          ) : (
+            <View style={styles.tipsBox}>
+              <Text style={styles.tipsTitle}>Search tips</Text>
+              <Text style={styles.tipsText}>
+                Try natural questions like &quot;Where are the batteries?&quot; or search by item name.
+              </Text>
+            </View>
+          )}
         </View>
-      ) : null}
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  flex: { flex: 1 },
+  inner: {
     flex: 1,
-    backgroundColor: '#f8f9fc',
-    padding: 20,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1a1a2e',
+    padding: spacing.screenPadding,
   },
   subtitle: {
-    fontSize: 15,
-    color: '#666',
-    marginTop: 4,
-    marginBottom: 20,
+    ...typography.body,
+    color: colors.inkSecondary,
+    marginBottom: spacing.lg,
   },
   searchRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: spacing.sm,
+    alignItems: 'flex-start',
   },
-  input: {
+  searchInput: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 14,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#e8e8ef',
+    marginBottom: 0,
   },
-  searchButton: {
-    backgroundColor: '#4a6cf7',
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    justifyContent: 'center',
-  },
-  searchButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+  searchBtn: {
+    minWidth: 96,
+    paddingHorizontal: spacing.lg,
   },
   resultSection: {
     flex: 1,
-    marginTop: 20,
+    marginTop: spacing.lg,
   },
   messageBox: {
-    backgroundColor: '#eef2ff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: colors.primarySoft,
+    borderRadius: spacing.cardRadius,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.hairline,
   },
   message: {
     fontSize: 16,
-    color: '#1a1a2e',
+    color: colors.ink,
     lineHeight: 24,
+  },
+  tipsBox: {
+    backgroundColor: colors.primarySoft,
+    borderRadius: spacing.cardRadius,
+    padding: spacing.lg,
+    marginTop: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+  },
+  tipsTitle: {
+    ...typography.label,
+    color: colors.ink,
+    marginBottom: spacing.xs,
+  },
+  tipsText: {
+    ...typography.body,
+    color: colors.inkSecondary,
+    lineHeight: 22,
   },
 });

@@ -1,21 +1,16 @@
 import React, { useCallback, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  FlatList,
-  ActivityIndicator,
-  RefreshControl,
-} from 'react-native';
+import { Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { HomeScreenProps } from '../navigation/types';
+import { useHousehold } from '../contexts/HouseholdContext';
 import { api } from '../services/api';
 import { ItemCard } from '../components/ItemCard';
+import { Button, Card, ScreenContainer } from '../components/ui';
+import { colors, spacing, typography } from '../theme';
 import type { Item } from '@household-inventory/shared';
 
-export function HomeScreen({ navigation, route }: HomeScreenProps) {
-  const { householdId, householdName } = route.params;
+export function HomeScreen({ navigation }: HomeScreenProps) {
+  const { householdId, householdName } = useHousehold();
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -39,45 +34,44 @@ export function HomeScreen({ navigation, route }: HomeScreenProps) {
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.title}>{householdName}</Text>
-          <Text style={styles.subtitle}>Your household inventory</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => navigation.navigate('Profile')}
-        >
-          <Text style={styles.profileButtonText}>Account</Text>
-        </TouchableOpacity>
-      </View>
+    <ScreenContainer>
+      <Text style={styles.title}>{householdName}</Text>
+      <Text style={styles.subtitle}>Your household inventory</Text>
 
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('RoomList', { householdId, householdName })}
-        >
-          <Text style={styles.actionButtonText}>Rooms</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.searchButton]}
-          onPress={() => navigation.navigate('Search', { householdId })}
-        >
-          <Text style={styles.actionButtonText}>Find item</Text>
-        </TouchableOpacity>
-      </View>
+      <Card
+        onPress={() => navigation.navigate('OITab', { screen: 'OIInsights' })}
+        style={styles.oiPromo}
+      >
+        <Text style={styles.oiPromoEyebrow}>OI</Text>
+        <Text style={styles.oiPromoTitle}>Organizational Intelligence</Text>
+        <Text style={styles.oiPromoBody}>
+          See category breakdowns, duplicate items, and expert tips to consolidate storage.
+        </Text>
+        <Button
+          title="View insights"
+          variant="secondary"
+          onPress={() => navigation.navigate('OITab', { screen: 'OIInsights' })}
+          style={styles.oiPromoButton}
+        />
+      </Card>
 
       <Text style={styles.sectionTitle}>Recent items</Text>
 
       {loading ? (
-        <ActivityIndicator style={styles.loader} color="#4a6cf7" />
+        <ActivityIndicator style={styles.loader} color={colors.primary} />
       ) : (
         <FlatList
           data={items}
           keyExtractor={(item) => item.id}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadItems(); }} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                loadItems();
+              }}
+              tintColor={colors.primary}
+            />
           }
           renderItem={({ item }) => (
             <ItemCard
@@ -86,81 +80,66 @@ export function HomeScreen({ navigation, route }: HomeScreenProps) {
             />
           )}
           ListEmptyComponent={
-            <Text style={styles.empty}>No items yet. Add a room and scan a storage area to get started.</Text>
+            <Text style={styles.empty}>
+              No items yet. Open the Rooms tab, add a storage area, and scan or add items.
+            </Text>
           }
         />
       )}
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fc',
-    padding: 20,
-  },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1a1a2e',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 4,
-  },
-  profileButton: {
-    backgroundColor: '#eef2ff',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  profileButtonText: {
-    color: '#4a6cf7',
-    fontWeight: '600',
-    fontSize: 13,
+    ...typography.heading,
+    color: colors.ink,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 4,
-    marginBottom: 20,
+    ...typography.body,
+    color: colors.inkSecondary,
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
   },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
+  oiPromo: {
+    marginBottom: spacing.xl,
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySoft,
   },
-  actionButton: {
-    flex: 1,
-    backgroundColor: '#4a6cf7',
-    padding: 14,
-    borderRadius: 10,
-    alignItems: 'center',
+  oiPromoEyebrow: {
+    ...typography.caption,
+    color: colors.primaryDeep,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: spacing.xs,
   },
-  searchButton: {
-    backgroundColor: '#1a1a2e',
+  oiPromoTitle: {
+    ...typography.sectionTitle,
+    color: colors.ink,
+    marginBottom: spacing.xs,
   },
-  actionButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 15,
+  oiPromoBody: {
+    ...typography.caption,
+    color: colors.inkSecondary,
+    lineHeight: 20,
+    marginBottom: spacing.md,
+  },
+  oiPromoButton: {
+    alignSelf: 'flex-start',
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1a1a2e',
-    marginBottom: 12,
+    ...typography.sectionTitle,
+    color: colors.ink,
+    marginBottom: spacing.md,
   },
   loader: {
-    marginTop: 40,
+    marginTop: spacing.xxl,
   },
   empty: {
-    color: '#888',
+    ...typography.body,
+    color: colors.inkMuted,
     textAlign: 'center',
-    marginTop: 40,
+    marginTop: spacing.xxl,
     lineHeight: 22,
   },
 });
