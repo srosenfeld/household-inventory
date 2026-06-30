@@ -9,6 +9,7 @@ import { authStackScreenOptions } from './src/navigation/theme';
 import { MainTabs } from './src/navigation/MainTabs';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { HouseholdProvider } from './src/contexts/HouseholdContext';
+import { PhotoSetupProvider } from './src/contexts/PhotoSetupContext';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { SignUpScreen } from './src/screens/SignUpScreen';
 import { ForgotPasswordScreen } from './src/screens/ForgotPasswordScreen';
@@ -120,7 +121,9 @@ function AppNavigator() {
           },
         }}
       >
-        <MainTabs />
+        <PhotoSetupProvider>
+          <MainTabs />
+        </PhotoSetupProvider>
       </HouseholdProvider>
     </NavigationContainer>
   );

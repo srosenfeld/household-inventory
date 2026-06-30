@@ -1,145 +1,151 @@
-import React, { useCallback, useState } from 'react';
-import { Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import type { HomeScreenProps } from '../navigation/types';
 import { useHousehold } from '../contexts/HouseholdContext';
-import { api } from '../services/api';
-import { ItemCard } from '../components/ItemCard';
-import { Button, Card, ScreenContainer } from '../components/ui';
+import { usePhotoSetup } from '../contexts/PhotoSetupContext';
+import { takePhoto } from '../services/camera';
+import { ScreenContainer } from '../components/ui';
 import { colors, spacing, typography } from '../theme';
-import type { Item } from '@household-inventory/shared';
 
 export function HomeScreen({ navigation }: HomeScreenProps) {
-  const { householdId, householdName } = useHousehold();
-  const [items, setItems] = useState<Item[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const { householdName } = useHousehold();
+  const { addPhotos, clearSession } = usePhotoSetup();
+  const [opening, setOpening] = useState(false);
 
-  const loadItems = useCallback(async () => {
+  const handleStartPhotos = async () => {
+    setOpening(true);
+    clearSession();
     try {
-      const data = await api.getRecentItems(householdId);
-      setItems(data);
+      const uri = await takePhoto();
+      if (uri) addPhotos([uri]);
+      navigation.navigate('PhotoCapture');
     } catch (err) {
-      console.error(err);
+      Alert.alert('Camera', err instanceof Error ? err.message : 'Could not open camera');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setOpening(false);
     }
-  }, [householdId]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadItems();
-    }, [loadItems])
-  );
+  };
 
   return (
-    <ScreenContainer>
-      <Text style={styles.title}>{householdName}</Text>
-      <Text style={styles.subtitle}>Your household inventory</Text>
+    <ScreenContainer style={styles.container}>
+      <Text style={styles.greeting}>{householdName}</Text>
+      <Text style={styles.tagline}>Map your home with photos</Text>
 
-      <Card
-        onPress={() => navigation.navigate('OITab', { screen: 'OIInsights' })}
-        style={styles.oiPromo}
+      <TouchableOpacity
+        style={styles.cta}
+        onPress={handleStartPhotos}
+        disabled={opening}
+        activeOpacity={0.92}
       >
-        <Text style={styles.oiPromoEyebrow}>OI</Text>
-        <Text style={styles.oiPromoTitle}>Organizational Intelligence</Text>
-        <Text style={styles.oiPromoBody}>
-          See category breakdowns, duplicate items, and expert tips to consolidate storage.
-        </Text>
-        <Button
-          title="View insights"
-          variant="secondary"
-          onPress={() => navigation.navigate('OITab', { screen: 'OIInsights' })}
-          style={styles.oiPromoButton}
-        />
-      </Card>
-
-      <Text style={styles.sectionTitle}>Recent items</Text>
-
-      {loading ? (
-        <ActivityIndicator style={styles.loader} color={colors.primary} />
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => item.id}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => {
-                setRefreshing(true);
-                loadItems();
-              }}
-              tintColor={colors.primary}
-            />
-          }
-          renderItem={({ item }) => (
-            <ItemCard
-              item={item}
-              onPress={() => navigation.navigate('ItemDetail', { itemId: item.id, item })}
-            />
-          )}
-          ListEmptyComponent={
-            <Text style={styles.empty}>
-              No items yet. Open the Rooms tab, add a storage area, and scan or add items.
+        {opening ? (
+          <ActivityIndicator size="large" color={colors.primaryDeep} />
+        ) : (
+          <>
+            <View style={styles.ctaIcon}>
+              <Ionicons
+                name={Platform.OS === 'web' ? 'images' : 'camera'}
+                size={Platform.OS === 'web' ? 44 : 56}
+                color={colors.primaryDeep}
+              />
+            </View>
+            <Text style={styles.ctaTitle}>
+              {Platform.OS === 'web' ? 'Add photos' : 'Take photos'}
             </Text>
-          }
-        />
-      )}
+            <Text style={styles.ctaHint}>
+              Photograph closets, drawers, dressers, and shelves — we'll help you sort them into
+              rooms.
+            </Text>
+          </>
+        )}
+      </TouchableOpacity>
+
+      <View style={styles.links}>
+        <TouchableOpacity onPress={() => navigation.navigate('RoomsTab', { screen: 'RoomList' })}>
+          <Text style={styles.link}>Browse rooms</Text>
+        </TouchableOpacity>
+        <Text style={styles.linkDot}>·</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('OITab', { screen: 'OIInsights' })}>
+          <Text style={styles.link}>Organizational Intelligence</Text>
+        </TouchableOpacity>
+      </View>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  title: {
+  container: {
+    justifyContent: 'center',
+  },
+  greeting: {
+    ...typography.caption,
+    color: colors.inkMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  tagline: {
     ...typography.heading,
     color: colors.ink,
+    textAlign: 'center',
+    marginBottom: spacing.xxl,
   },
-  subtitle: {
+  cta: {
+    backgroundColor: colors.primarySoft,
+    borderRadius: spacing.cardRadius,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    paddingVertical: Platform.OS === 'web' ? spacing.xxl : 48,
+    paddingHorizontal: spacing.xl,
+    alignItems: 'center',
+    marginBottom: spacing.xxl,
+  },
+  ctaIcon: {
+    width: Platform.OS === 'web' ? 80 : 104,
+    height: Platform.OS === 'web' ? 80 : 104,
+    borderRadius: 999,
+    backgroundColor: colors.canvas,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+  },
+  ctaTitle: {
+    fontSize: Platform.OS === 'web' ? 22 : 26,
+    fontWeight: '700',
+    color: colors.ink,
+    marginBottom: spacing.sm,
+  },
+  ctaHint: {
     ...typography.body,
     color: colors.inkSecondary,
-    marginTop: spacing.xs,
-    marginBottom: spacing.lg,
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 300,
   },
-  oiPromo: {
-    marginBottom: spacing.xl,
-    borderColor: colors.primary,
-    backgroundColor: colors.primarySoft,
+  links: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
-  oiPromoEyebrow: {
+  link: {
     ...typography.caption,
     color: colors.primaryDeep,
-    fontWeight: '700',
-    letterSpacing: 1,
-    marginBottom: spacing.xs,
+    fontWeight: '600',
   },
-  oiPromoTitle: {
-    ...typography.sectionTitle,
-    color: colors.ink,
-    marginBottom: spacing.xs,
-  },
-  oiPromoBody: {
-    ...typography.caption,
-    color: colors.inkSecondary,
-    lineHeight: 20,
-    marginBottom: spacing.md,
-  },
-  oiPromoButton: {
-    alignSelf: 'flex-start',
-  },
-  sectionTitle: {
-    ...typography.sectionTitle,
-    color: colors.ink,
-    marginBottom: spacing.md,
-  },
-  loader: {
-    marginTop: spacing.xxl,
-  },
-  empty: {
-    ...typography.body,
+  linkDot: {
     color: colors.inkMuted,
-    textAlign: 'center',
-    marginTop: spacing.xxl,
-    lineHeight: 22,
   },
 });

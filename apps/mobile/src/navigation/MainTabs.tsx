@@ -13,6 +13,9 @@ import type {
 import { colors } from '../theme';
 import { stackScreenOptions } from './theme';
 import { HomeScreen } from '../screens/HomeScreen';
+import { PhotoCaptureScreen } from '../screens/PhotoCaptureScreen';
+import { AssignPhotosToRoomsScreen } from '../screens/AssignPhotosToRoomsScreen';
+import { OrganizeRoomPhotosScreen } from '../screens/OrganizeRoomPhotosScreen';
 import { RoomListScreen } from '../screens/RoomListScreen';
 import { RoomLayoutScreen } from '../screens/RoomLayoutScreen';
 import { StorageAreaScreen } from '../screens/StorageAreaScreen';
@@ -34,6 +37,17 @@ function HomeTabNavigator() {
   return (
     <HomeStack.Navigator screenOptions={stackScreenOptions}>
       <HomeStack.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
+      <HomeStack.Screen name="PhotoCapture" component={PhotoCaptureScreen} options={{ title: 'Take photos' }} />
+      <HomeStack.Screen
+        name="AssignPhotosToRooms"
+        component={AssignPhotosToRoomsScreen}
+        options={{ title: 'Assign to rooms' }}
+      />
+      <HomeStack.Screen
+        name="OrganizeRoomPhotos"
+        component={OrganizeRoomPhotosScreen}
+        options={{ title: 'Organize' }}
+      />
       <HomeStack.Screen name="ItemDetail" component={ItemDetailScreen} options={{ title: 'Item details' }} />
     </HomeStack.Navigator>
   );

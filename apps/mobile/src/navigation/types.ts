@@ -12,6 +12,9 @@ export type AuthStackParamList = {
 
 export type HomeTabParamList = {
   Home: undefined;
+  PhotoCapture: undefined;
+  AssignPhotosToRooms: undefined;
+  OrganizeRoomPhotos: undefined;
   ItemDetail: {
     itemId: string;
     item?: Item;
@@ -100,6 +103,12 @@ export type CreateHouseholdScreenProps = { onComplete?: (householdId: string, ho
 
 export type HomeScreenProps = CompositeScreenProps<
   NativeStackScreenProps<HomeTabParamList, 'Home'>,
+  BottomTabScreenProps<MainTabParamList>
+>;
+export type PhotoCaptureScreenProps = NativeStackScreenProps<HomeTabParamList, 'PhotoCapture'>;
+export type AssignPhotosToRoomsScreenProps = NativeStackScreenProps<HomeTabParamList, 'AssignPhotosToRooms'>;
+export type OrganizeRoomPhotosScreenProps = CompositeScreenProps<
+  NativeStackScreenProps<HomeTabParamList, 'OrganizeRoomPhotos'>,
   BottomTabScreenProps<MainTabParamList>
 >;
 
