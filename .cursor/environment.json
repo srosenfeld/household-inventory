@@ -1,0 +1,25 @@
+{
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "install": "npm install && npm run build",
+  "start": "sudo service docker start && docker compose up -d && sleep 3 && npm run db:migrate",
+  "terminals": [
+    {
+      "name": "api",
+      "command": "npm run dev:api",
+      "description": "Fastify API on port 3001"
+    },
+    {
+      "name": "expo-web",
+      "command": "npm run dev:web",
+      "description": "Expo web client (Metro on 8081, web UI on 19006)"
+    }
+  ],
+  "ports": [
+    { "name": "api", "port": 3001 },
+    { "name": "metro", "port": 8081 },
+    { "name": "expo-web", "port": 19006 }
+  ]
+}
