@@ -323,6 +323,62 @@ export function RoomLayoutScreen({ navigation, route }: RoomLayoutScreenProps) {
 
   const renderListHeader = () => (
     <View>
+      <View style={styles.roomHeader}>
+        <Input
+          style={styles.roomNameInput}
+          value={roomName}
+          onChangeText={setRoomName}
+          onBlur={handleSaveRoomName}
+          placeholder="Room name"
+        />
+        <PhotoThumbnail
+          uri={photoUri}
+          onPress={handlePickRoomPhoto}
+          label="Room photo"
+          size={64}
+          loading={saving}
+        />
+      </View>
+
+      <TouchableOpacity
+        style={styles.mapToggle}
+        onPress={() => setMapExpanded((v) => !v)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: mapExpanded }}
+      >
+        <Text style={styles.mapToggleText}>
+          {mapExpanded ? 'Hide room map' : 'Show room map'}
+        </Text>
+        <Text style={styles.mapToggleHint}>
+          {photoUri ? 'Tap zones on the photo to select' : 'Add a room photo to place storage areas'}
+        </Text>
+      </TouchableOpacity>
+
+      {mapExpanded ? (
+        <View style={styles.mapSection}>
+          {!photoUri ? (
+            <Button
+              title="Add room photo"
+              variant="secondary"
+              onPress={handlePickRoomPhoto}
+              disabled={saving}
+              style={styles.mapAddPhotoBtn}
+            />
+          ) : null}
+          <LayoutCanvas
+            photoUri={photoUri}
+            zones={zones}
+            selectedZoneId={selectedZoneId}
+            onSelectZone={handleSelectZone}
+            onUpdateZone={handleUpdateZone}
+            onAddZone={handleAddZone}
+            onGestureActiveChange={setCanvasGestureActive}
+            showAddButton={false}
+            compact
+          />
+        </View>
+      ) : null}
+
       <View style={styles.listHeaderRow}>
         <Text style={styles.sectionTitle}>Storage areas ({zones.length})</Text>
         <Button title="+ Add" onPress={promptAddZone} style={styles.addZoneBtn} />
@@ -343,65 +399,7 @@ export function RoomLayoutScreen({ navigation, route }: RoomLayoutScreenProps) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.topSection}>
-        <View style={styles.roomHeader}>
-          <Input
-            style={styles.roomNameInput}
-            value={roomName}
-            onChangeText={setRoomName}
-            onBlur={handleSaveRoomName}
-            placeholder="Room name"
-          />
-          <PhotoThumbnail
-            uri={photoUri}
-            onPress={handlePickRoomPhoto}
-            label="Room photo"
-            size={64}
-            loading={saving}
-          />
-        </View>
-
-        <TouchableOpacity
-          style={styles.mapToggle}
-          onPress={() => setMapExpanded((v) => !v)}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: mapExpanded }}
-        >
-          <Text style={styles.mapToggleText}>
-            {mapExpanded ? 'Hide room map' : 'Show room map'}
-          </Text>
-          <Text style={styles.mapToggleHint}>
-            {photoUri ? 'Tap zones on the photo to select' : 'Add a room photo to place storage areas'}
-          </Text>
-        </TouchableOpacity>
-
-        {mapExpanded ? (
-          <View style={styles.mapSection} key="room-map">
-            {!photoUri ? (
-              <Button
-                title="Add room photo"
-                variant="secondary"
-                onPress={handlePickRoomPhoto}
-                disabled={saving}
-              />
-            ) : null}
-            <LayoutCanvas
-              photoUri={photoUri}
-              zones={zones}
-              selectedZoneId={selectedZoneId}
-              onSelectZone={handleSelectZone}
-              onUpdateZone={handleUpdateZone}
-              onAddZone={handleAddZone}
-              onGestureActiveChange={setCanvasGestureActive}
-              showAddButton={false}
-              compact
-            />
-          </View>
-        ) : null}
-      </View>
-
       <FlatList
-        style={styles.list}
         data={zones}
         keyExtractor={(zone) => zone.id}
         scrollEnabled={!canvasGestureActive}
@@ -409,14 +407,13 @@ export function RoomLayoutScreen({ navigation, route }: RoomLayoutScreenProps) {
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={renderListHeader}
         ListFooterComponent={renderZoneEditor}
-        extraData={{ mapExpanded, selectedZoneId, zonePhotoSaving, zones }}
+        extraData={{ mapExpanded, selectedZoneId, zonePhotoSaving, zones, photoUri, saving }}
         ListEmptyComponent={
           <Text style={styles.emptyZones}>No storage areas yet. Tap "+ Add" above.</Text>
         }
         renderItem={({ item: zone }) => (
-          <TouchableOpacity
+          <View
             style={[styles.zoneRow, selectedZoneId === zone.id && styles.zoneRowSelected]}
-            onPress={() => handleSelectZone(zone.id)}
           >
             <PhotoThumbnail
               uri={zonePhotoUri(zone)}
@@ -425,17 +422,30 @@ export function RoomLayoutScreen({ navigation, route }: RoomLayoutScreenProps) {
                 handleZonePhoto(zone.id);
               }}
               label="Photo"
-              size={52}
+              size={48}
+              showLabel={false}
               loading={zonePhotoSaving && selectedZoneId === zone.id}
             />
-            <View style={styles.zoneRowText}>
-              <Text style={styles.zoneRowName}>{zone.name}</Text>
-              <Text style={styles.zoneRowMeta}>{zone.type}</Text>
-            </View>
-            <TouchableOpacity style={styles.zoneRowOpen} onPress={() => handleOpenZone(zone)}>
+            <TouchableOpacity
+              style={styles.zoneRowText}
+              onPress={() => handleSelectZone(zone.id)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.zoneRowName} numberOfLines={1}>
+                {zone.name}
+              </Text>
+              <Text style={styles.zoneRowMeta} numberOfLines={1}>
+                {zone.type}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.zoneRowOpen}
+              onPress={() => handleOpenZone(zone)}
+              hitSlop={4}
+            >
               <Text style={styles.zoneRowOpenText}>Items</Text>
             </TouchableOpacity>
-          </TouchableOpacity>
+          </View>
         )}
       />
     </View>
@@ -447,21 +457,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.canvasSoft,
   },
-  topSection: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.hairline,
-    backgroundColor: colors.canvasSoft,
-  },
-  list: {
-    flex: 1,
-  },
   listContent: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingTop: spacing.lg,
     paddingBottom: 40,
+    flexGrow: 1,
   },
   centered: {
     flex: 1,
@@ -498,24 +498,33 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   mapSection: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.lg,
     gap: spacing.sm,
     width: '100%',
+    overflow: 'hidden',
+  },
+  mapAddPhotoBtn: {
+    marginBottom: spacing.xs,
   },
   listHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: spacing.xs,
+    marginTop: spacing.sm,
+    gap: spacing.sm,
   },
   addZoneBtn: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     minHeight: 40,
     paddingVertical: spacing.sm,
+    flexShrink: 0,
   },
   sectionTitle: {
     ...typography.sectionTitle,
     color: colors.ink,
+    flex: 1,
+    flexShrink: 1,
   },
   sectionHint: {
     ...typography.caption,
@@ -527,11 +536,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.canvas,
     borderRadius: spacing.buttonRadius,
-    padding: spacing.md,
     marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.hairline,
-    gap: spacing.md,
+    overflow: 'hidden',
+    paddingLeft: spacing.md,
+    gap: spacing.sm,
   },
   zoneRowSelected: {
     borderColor: colors.primary,
@@ -539,6 +549,9 @@ const styles = StyleSheet.create({
   },
   zoneRowText: {
     flex: 1,
+    minWidth: 0,
+    paddingVertical: spacing.md,
+    justifyContent: 'center',
   },
   zoneRowName: {
     fontSize: 16,
@@ -552,10 +565,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   zoneRowOpen: {
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: spacing.buttonRadius,
     backgroundColor: colors.primary,
+    minWidth: 72,
   },
   zoneRowOpenText: {
     color: colors.ink,

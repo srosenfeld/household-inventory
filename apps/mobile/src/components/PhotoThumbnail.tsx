@@ -8,6 +8,7 @@ interface PhotoThumbnailProps {
   label?: string;
   size?: number;
   loading?: boolean;
+  showLabel?: boolean;
 }
 
 export function PhotoThumbnail({
@@ -16,29 +17,34 @@ export function PhotoThumbnail({
   label = 'Add photo',
   size = 72,
   loading = false,
+  showLabel = true,
 }: PhotoThumbnailProps) {
   return (
     <TouchableOpacity
-      style={[styles.wrap, { width: size, height: size }]}
+      style={[styles.wrap, showLabel ? styles.wrapWithLabel : { width: size }]}
       onPress={onPress}
       disabled={loading}
       activeOpacity={0.85}
     >
-      {uri ? (
-        <Image source={{ uri }} style={[styles.image, { width: size, height: size, borderRadius: size / 8 }]} />
-      ) : (
-        <View style={[styles.placeholder, { width: size, height: size, borderRadius: size / 8 }]}>
-          <Text style={styles.placeholderText}>+</Text>
-        </View>
-      )}
-      {loading ? (
-        <View style={[styles.overlay, { borderRadius: size / 8 }]}>
-          <ActivityIndicator color={colors.ink} size="small" />
-        </View>
+      <View style={{ width: size, height: size }}>
+        {uri ? (
+          <Image source={{ uri }} style={[styles.image, { width: size, height: size, borderRadius: size / 8 }]} />
+        ) : (
+          <View style={[styles.placeholder, { width: size, height: size, borderRadius: size / 8 }]}>
+            <Text style={[styles.placeholderText, size < 56 && styles.placeholderTextSmall]}>+</Text>
+          </View>
+        )}
+        {loading ? (
+          <View style={[styles.overlay, { borderRadius: size / 8 }]}>
+            <ActivityIndicator color={colors.ink} size="small" />
+          </View>
+        ) : null}
+      </View>
+      {showLabel ? (
+        <Text style={[styles.label, { maxWidth: size + 16 }]} numberOfLines={1}>
+          {uri ? 'Change' : label}
+        </Text>
       ) : null}
-      <Text style={styles.label} numberOfLines={1}>
-        {uri ? 'Change' : label}
-      </Text>
     </TouchableOpacity>
   );
 }
@@ -46,6 +52,9 @@ export function PhotoThumbnail({
 const styles = StyleSheet.create({
   wrap: {
     alignItems: 'center',
+  },
+  wrapWithLabel: {
+    maxWidth: 88,
   },
   image: {
     backgroundColor: colors.hairline,
@@ -62,6 +71,9 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: colors.primaryDeep,
     fontWeight: '600',
+  },
+  placeholderTextSmall: {
+    fontSize: 20,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
