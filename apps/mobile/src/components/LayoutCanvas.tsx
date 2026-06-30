@@ -270,12 +270,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   containerCompact: {
+    flex: 0,
     flexGrow: 0,
     flexShrink: 0,
     width: '100%',
+    overflow: 'hidden',
   },
   canvas: {
-    flex: 1,
     backgroundColor: colors.canvasSoft,
     borderRadius: spacing.cardRadius,
     overflow: 'hidden',
@@ -284,10 +285,12 @@ const styles = StyleSheet.create({
     borderColor: colors.hairline,
   },
   canvasCompact: {
+    flex: 0,
     flexGrow: 0,
     flexShrink: 0,
     height: 220,
     minHeight: 220,
+    maxHeight: 220,
     width: '100%',
   },
   photo: {
